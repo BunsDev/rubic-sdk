@@ -1,6 +1,6 @@
 {
-  "name": "rubic-sdk",
-  "version": "1.0.4",
+  "name": "soulswap-rubik-sdk",
+  "version": "1.0.0",
   "description": "Simplify dApp creation",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -10,11 +10,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Cryptorubic/rubic-sdk.git"
+    "url": "git+https://github.com/BunsDev/rubic-sdk.git"
   },
-  "homepage": "https://github.com/Cryptorubic/rubic-sdk",
+  "homepage": "https://github.com/BunsDev/rubic-sdk",
   "bugs": {
-    "url": "https://github.com/Cryptorubic/rubic-sdk/issues"
+    "url": "https://github.com/BunsDev/rubic-sdk/issues"
   },
   "keywords": [
     "Ethereum",
@@ -28,19 +28,14 @@
     "Binance-Smart-Chain"
   ],
   "engines": {
-    "node": ">=16"
+    "node": ">=14"
   },
-  "author": "rubic.exchange",
+  "author": "soulswap.finance",
   "authors": [
     {
-      "name": "Sergey Andreev",
-      "email": "andreev@mywish.io",
-      "homepage": "https://github.com/siandreev"
-    },
-    {
-      "name": "Andrey Ott",
-      "email": "ott@mywish.io",
-      "url": "https://github.com/ottebrut"
+      "name": "Buns Enchantress",
+      "email": "bunsthedev@gmail.com",
+      "homepage": "https://github.com/BunsDev"
     }
   ],
   "license": "GPL-3.0",
