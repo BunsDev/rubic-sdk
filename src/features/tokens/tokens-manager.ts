@@ -6,7 +6,7 @@ import {
     PriceTokenAmountStruct
 } from '@core/blockchain/tokens/price-token-amount';
 import { Token, TokenStruct } from '@core/blockchain/tokens/token';
-import { BLOCKCHAIN_NAME } from '@core/blockchain/models/BLOCKCHAIN_NAME';
+import { BLOCKCHAIN_NAME } from 'src/core/blockchain/models/blockchain-name';
 import BigNumber from 'bignumber.js';
 
 export class TokensManager {

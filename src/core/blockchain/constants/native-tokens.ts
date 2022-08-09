@@ -1,5 +1,5 @@
 import { NATIVE_TOKEN_ADDRESS } from '@core/blockchain/constants/native-token-address';
-import { BLOCKCHAIN_NAME } from '@core/blockchain/models/BLOCKCHAIN_NAME';
+import { BLOCKCHAIN_NAME } from 'src/core/blockchain/models/blockchain-name';
 import { TokenStruct } from '@core/blockchain/tokens/token';
 
 export type NativeTokensList = Record<BLOCKCHAIN_NAME, Omit<TokenStruct, 'blockchain'>>;

@@ -1,4 +1,4 @@
-import { BLOCKCHAIN_NAME } from '@core/blockchain/models/BLOCKCHAIN_NAME';
+import { BLOCKCHAIN_NAME } from 'src/core/blockchain/models/blockchain-name';
 import { zrxApiParams } from '@features/instant-trades/dexes/common/zrx-common/constants';
 import { RubicSdkError } from '@common/errors/rubic-sdk.error';
 

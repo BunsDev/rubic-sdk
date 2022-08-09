@@ -1,6 +1,6 @@
 import { NATIVE_TOKEN_ADDRESS } from '@core/blockchain/constants/native-token-address';
 import { Blockchain } from '@core/blockchain/models/blockchain';
-import { BLOCKCHAIN_NAME } from '@core/blockchain/models/BLOCKCHAIN_NAME';
+import { BLOCKCHAIN_NAME } from 'src/core/blockchain/models/blockchain-name';
 import { Token } from '@core/blockchain/tokens/token';
 
 export const blockchains: ReadonlyArray<Blockchain> = [

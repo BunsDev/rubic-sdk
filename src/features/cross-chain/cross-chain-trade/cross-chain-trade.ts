@@ -3,7 +3,7 @@ import { Web3Pure } from '@core/blockchain/web3-pure/web3-pure';
 import { Injector } from '@core/sdk/injector';
 import { PriceTokenAmount } from '@core/blockchain/tokens/price-token-amount';
 import { GasData } from '@features/cross-chain/models/gas-data';
-import { BLOCKCHAIN_NAME } from '@core/blockchain/models/BLOCKCHAIN_NAME';
+import { BLOCKCHAIN_NAME } from 'src/core/blockchain/models/blockchain-name';
 import { Web3Public } from '@core/blockchain/web3-public/web3-public';
 import { CrossChainIsUnavailableError } from '@common/errors/cross-chain/cross-chain-is-unavailable.error';
 import { MaxGasPriceOverflowError } from '@common/errors/cross-chain/max-gas-price-overflow.error';

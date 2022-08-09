@@ -1,7 +1,7 @@
 import { RubicSdkError } from '@common/errors/rubic-sdk.error';
 import { TimeoutError } from '@common/errors/utils/timeout.error';
 import pTimeout from '@common/utils/p-timeout';
-import { BLOCKCHAIN_NAME } from '@core/blockchain/models/BLOCKCHAIN_NAME';
+import { BLOCKCHAIN_NAME } from 'src/core/blockchain/models/blockchain-name';
 import { Web3Public } from '@core/blockchain/web3-public/web3-public';
 import { RpcProvider } from '@core/sdk/models/configuration';
 import Web3 from 'web3';

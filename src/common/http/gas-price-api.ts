@@ -1,5 +1,5 @@
 import pTimeout from '@common/utils/p-timeout';
-import { BLOCKCHAIN_NAME } from '@core/blockchain/models/BLOCKCHAIN_NAME';
+import { BLOCKCHAIN_NAME } from 'src/core/blockchain/models/blockchain-name';
 import { Injector } from '@core/sdk/injector';
 import { Cache } from 'src/common';
 import BigNumber from 'bignumber.js';

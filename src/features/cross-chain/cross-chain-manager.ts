@@ -7,7 +7,7 @@ import {
 import { Token } from '@core/blockchain/tokens/token';
 import BigNumber from 'bignumber.js';
 import { CrossChainOptions } from '@features/cross-chain/models/cross-chain-options';
-import { BLOCKCHAIN_NAME } from '@core/blockchain/models/BLOCKCHAIN_NAME';
+import { BLOCKCHAIN_NAME } from 'src/core/blockchain/models/blockchain-name';
 import { compareAddresses } from '@common/utils/blockchain';
 import { PriceTokenAmount } from '@core/blockchain/tokens/price-token-amount';
 import { Web3Pure } from '@core/blockchain/web3-pure/web3-pure';

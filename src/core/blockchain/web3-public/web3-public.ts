@@ -9,7 +9,7 @@ import {
     isBlockchainHealthcheckAvailable
 } from '@core/blockchain/constants/healthcheck';
 import { nativeTokensList } from '@core/blockchain/constants/native-tokens';
-import { BLOCKCHAIN_NAME } from '@core/blockchain/models/BLOCKCHAIN_NAME';
+import { BLOCKCHAIN_NAME } from 'src/core/blockchain/models/blockchain-name';
 import { MULTICALL_ABI } from '@core/blockchain/web3-public/constants/multicall-abi';
 import { MULTICALL_ADDRESSES } from '@core/blockchain/web3-public/constants/multicall-addresses';
 import { BatchCall } from '@core/blockchain/web3-public/models/batch-call';

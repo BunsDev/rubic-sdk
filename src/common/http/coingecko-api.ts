@@ -1,7 +1,7 @@
 import { TimeoutError } from '@common/errors/utils/timeout.error';
 import { HttpClient } from '@common/models/http-client';
 import pTimeout from '@common/utils/p-timeout';
-import { BLOCKCHAIN_NAME } from '@core/blockchain/models/BLOCKCHAIN_NAME';
+import { BLOCKCHAIN_NAME } from 'src/core/blockchain/models/blockchain-name';
 import BigNumber from 'bignumber.js';
 import { Cache } from 'src/common';
 import { RubicSdkError } from '@common/errors/rubic-sdk.error';

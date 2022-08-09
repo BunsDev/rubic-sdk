@@ -1,4 +1,4 @@
-import { BLOCKCHAIN_NAME } from '@core/blockchain/models/BLOCKCHAIN_NAME';
+import { BLOCKCHAIN_NAME } from 'src/core/blockchain/models/blockchain-name';
 import { Web3Public } from '@core/blockchain/web3-public/web3-public';
 import { Injector } from '@core/sdk/injector';
 import { Cache } from '@common/decorators/cache.decorator';

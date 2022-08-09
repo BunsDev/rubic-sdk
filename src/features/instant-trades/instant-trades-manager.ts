@@ -3,7 +3,7 @@ import { notNull } from '@common/utils/object';
 import { combineOptions } from '@common/utils/options';
 import pTimeout from '@common/utils/p-timeout';
 import { Mutable } from '@common/utils/types/mutable';
-import { BLOCKCHAIN_NAME } from '@core/blockchain/models/BLOCKCHAIN_NAME';
+import { BLOCKCHAIN_NAME } from 'src/core/blockchain/models/blockchain-name';
 import { PriceToken } from '@core/blockchain/tokens/price-token';
 import { PriceTokenAmount } from '@core/blockchain/tokens/price-token-amount';
 import { Token } from '@core/blockchain/tokens/token';
