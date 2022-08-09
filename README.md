@@ -109,6 +109,7 @@ In dApps a lot of business logic is often concentrated on the frontend for inter
     - [Pangolin](https://app.pangolin.exchange/#/swap)
     - [Sushiswap](https://sushi.com/)
 - Fantom
+    - [SoulSwap](https://soulswap.finance/)
     - [Spirit Swap](https://swap.spiritswap.finance/)
     - [Spooky Swap](https://spookyswap.finance/)
     - [Sushiswap](https://sushi.com/)

@@ -1,5 +1,6 @@
 module.exports = {
     root: true,
+    root: 'src',
     ignorePatterns: ['**/*.js'],
     overrides: [
         {
