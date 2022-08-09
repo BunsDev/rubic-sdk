@@ -29,7 +29,8 @@ export const TRADE_TYPE = {
     UNI_SWAP_V3_ARBITRUM: 'UNI_SWAP_V3_ARBITRUM',
     TRISOLARIS: 'TRISOLARIS',
     WANNA_SWAP: 'WANNA_SWAP',
-    SUSHI_SWAP: 'SUSHI_SWAP'
+    SUSHI_SWAP: 'SUSHI_SWAP',
+    ONE_INCH: 'ONE_INCH'
 } as const;
 
 export type TradeType = keyof typeof TRADE_TYPE;
