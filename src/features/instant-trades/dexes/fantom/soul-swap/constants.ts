@@ -12,7 +12,7 @@ const routingProvidersAddresses = [
     '0x74b23882a30290451a17c44f4f05243b6b58c76d', // wETH
     '0xe2fb177009FF39F52C0134E8007FA0e4BaAcBd07', // SOUL
     '0x6671E20b83Ba463F270c8c75dAe57e3Cc246cB2b', // LUX
-    '0xEFFd4874AcA3Acd19a24dF3281b5cdAdD823801A', // SOR
+    '0xEFFd4874AcA3Acd19a24dF3281b5cdAdD823801A' // SOR
 ];
 
 export const SOUL_SWAP_PROVIDER_CONFIGURATION: UniswapV2ProviderConfiguration = {

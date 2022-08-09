@@ -18,7 +18,7 @@ export enum MAINNET_BLOCKCHAIN_NAME {
     HARMONY = 'HARMONY',
     ARBITRUM = 'ARBITRUM',
     AURORA = 'AURORA',
-    TELOS = 'TELOS',
+    TELOS = 'TELOS'
 }
 
 export const BLOCKCHAIN_NAME = {
