@@ -1,5 +1,5 @@
 {
-  "name": "soulswap-rubik-sdk",
+  "name": "rubik-sdk",
   "version": "1.0.0",
   "description": "Simplify dApp creation",
   "main": "lib/index.js",
