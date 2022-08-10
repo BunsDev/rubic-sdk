@@ -16,7 +16,7 @@ export { ZrxTrade } from './dexes/common/zrx-common/zrx-trade';
 
 export { SwapCalculationOptions } from './models/swap-calculation-options';
 export { SwapTransactionOptions } from './models/swap-transaction-options';
-export { EncodeTransactionOptions } from 'src/features/instant-trades/models/encode-transaction-options';
+export { EncodeTransactionOptions } from '../../features/instant-trades/models/encode-transaction-options';
 export { GasFeeInfo } from './models/gas-fee-info';
 
 export { TRADE_TYPE, TradeType } from './models/trade-type';
