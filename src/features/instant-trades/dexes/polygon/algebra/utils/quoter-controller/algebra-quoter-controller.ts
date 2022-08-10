@@ -1,18 +1,18 @@
 import { BLOCKCHAIN_NAME, PriceToken, Web3Public } from 'src/core';
-import { MethodData } from '@core/blockchain/web3-public/models/method-data';
-import { AlgebraRoute } from '@features/instant-trades/dexes/polygon/algebra/models/algebra-route';
+import { MethodData } from 'src/core/blockchain/web3-public/models/method-data';
+import { AlgebraRoute } from 'src/features/instant-trades/dexes/polygon/algebra/models/algebra-route';
 import { notNull } from 'src/common';
 import BigNumber from 'bignumber.js';
-import { ContractMulticallResponse } from '@core/blockchain/web3-public/models/contract-multicall-response';
+import { ContractMulticallResponse } from 'src/core/blockchain/web3-public/models/contract-multicall-response';
 import {
     QUOTER_CONTRACT_ABI,
     QUOTER_CONTRACT_ADDRESS
-} from '@features/instant-trades/dexes/polygon/algebra/utils/quoter-controller/constants/quoter-contract-data';
-import { Injector } from '@core/sdk/injector';
-import { ROUTER_TOKENS } from '@features/instant-trades/dexes/polygon/algebra/utils/quoter-controller/constants/router-tokens';
-import { Token } from '@core/blockchain/tokens/token';
-import { UniswapV3AlgebraQuoterController } from '@features/instant-trades/dexes/common/uniswap-v3-algebra-abstract/models/uniswap-v3-algebra-quoter-controller';
-import { Exact } from '@features/instant-trades/models/exact';
+} from 'src/features/instant-trades/dexes/polygon/algebra/utils/quoter-controller/constants/quoter-contract-data';
+import { Injector } from 'src/core/sdk/injector';
+import { ROUTER_TOKENS } from 'src/features/instant-trades/dexes/polygon/algebra/utils/quoter-controller/constants/router-tokens';
+import { Token } from 'src/core/blockchain/tokens/token';
+import { UniswapV3AlgebraQuoterController } from 'src/features/instant-trades/dexes/common/uniswap-v3-algebra-abstract/models/uniswap-v3-algebra-quoter-controller';
+import { Exact } from 'src/features/instant-trades/models/exact';
 
 interface GetQuoterMethodsDataOptions {
     routesTokens: Token[];

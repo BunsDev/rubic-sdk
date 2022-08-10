@@ -1,5 +1,5 @@
-import { compareAddresses } from '@common/utils/blockchain';
-import { Token } from '@core/blockchain/tokens/token';
+import { compareAddresses } from 'src/common/utils/blockchain';
+import { Token } from 'src/core/blockchain/tokens/token';
 
 export type FeeAmount = 500 | 3000 | 10000;
 

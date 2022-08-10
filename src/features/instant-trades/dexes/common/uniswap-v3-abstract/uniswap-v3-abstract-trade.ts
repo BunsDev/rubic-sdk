@@ -1,18 +1,18 @@
-import { UniswapV3Route } from '@features/instant-trades/dexes/common/uniswap-v3-abstract/models/uniswap-v3-route';
-import { MethodData } from '@core/blockchain/web3-public/models/method-data';
-import { UniswapV3QuoterController } from '@features/instant-trades/dexes/common/uniswap-v3-abstract/utils/quoter-controller/uniswap-v3-quoter-controller';
+import { UniswapV3Route } from 'src/features/instant-trades/dexes/common/uniswap-v3-abstract/models/uniswap-v3-route';
+import { MethodData } from 'src/core/blockchain/web3-public/models/method-data';
+import { UniswapV3QuoterController } from 'src/features/instant-trades/dexes/common/uniswap-v3-abstract/utils/quoter-controller/uniswap-v3-quoter-controller';
 import { Cache, compareAddresses } from 'src/common';
-import { Token } from '@core/blockchain/tokens/token';
+import { Token } from 'src/core/blockchain/tokens/token';
 import {
     UniswapV3AlgebraAbstractTrade,
     UniswapV3AlgebraTradeStruct
-} from '@features/instant-trades/dexes/common/uniswap-v3-algebra-abstract/uniswap-v3-algebra-abstract-trade';
+} from 'src/features/instant-trades/dexes/common/uniswap-v3-algebra-abstract/uniswap-v3-algebra-abstract-trade';
 
 import {
     UNISWAP_V3_SWAP_ROUTER_CONTRACT_ABI,
     UNISWAP_V3_SWAP_ROUTER_CONTRACT_ADDRESS
-} from '@features/instant-trades/dexes/common/uniswap-v3-abstract/constants/swap-router-contract-abi';
-import { createTokenNativeAddressProxyInPathStartAndEnd } from '@features/instant-trades/dexes/common/utils/token-native-address-proxy';
+} from 'src/features/instant-trades/dexes/common/uniswap-v3-abstract/constants/swap-router-contract-abi';
+import { createTokenNativeAddressProxyInPathStartAndEnd } from 'src/features/instant-trades/dexes/common/utils/token-native-address-proxy';
 import { Web3Pure } from 'src/core';
 
 export interface UniswapV3TradeStruct extends UniswapV3AlgebraTradeStruct {

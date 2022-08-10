@@ -1,8 +1,8 @@
 import {
     UniswapV2AbstractTrade,
     UniswapV2TradeStruct
-} from '@features/instant-trades/dexes/common/uniswap-v2-abstract/uniswap-v2-abstract-trade';
-import { SOUL_SWAP_CONTRACT_ADDRESS } from '@features/instant-trades/dexes/fantom/soul-swap/constants';
+} from 'src/features/instant-trades/dexes/common/uniswap-v2-abstract/uniswap-v2-abstract-trade';
+import { SOUL_SWAP_CONTRACT_ADDRESS } from 'src/features/instant-trades/dexes/fantom/soul-swap/constants';
 import { TRADE_TYPE, TradeType } from 'src/features';
 
 export class SoulSwapTrade extends UniswapV2AbstractTrade {

@@ -1,5 +1,5 @@
-import { UniswapV2ProviderConfiguration } from '@features/instant-trades/dexes/common/uniswap-v2-abstract/models/uniswap-v2-provider-configuration';
-import { defaultFantomProviderConfiguration } from '@features/instant-trades/dexes/fantom/default-constants';
+import { UniswapV2ProviderConfiguration } from 'src/features/instant-trades/dexes/common/uniswap-v2-abstract/models/uniswap-v2-provider-configuration';
+import { defaultFantomProviderConfiguration } from 'src/features/instant-trades/dexes/fantom/default-constants';
 
 export const SOUL_SWAP_CONTRACT_ADDRESS = '0x6b3d631B87FE27aF29efeC61d2ab8CE4d621cCBF'; // SoulSwapRouter
 

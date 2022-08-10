@@ -1,8 +1,8 @@
-import { TokenBaseStruct } from '@core/blockchain/models/token-base-struct';
-import { PriceToken } from '@core/blockchain/tokens/price-token';
+import { TokenBaseStruct } from 'src/core/blockchain/models/token-base-struct';
+import { PriceToken } from 'src/core/blockchain/tokens/price-token';
 import BigNumber from 'bignumber.js';
-import { TokenStruct } from '@core/blockchain/tokens/token';
-import { Web3Pure } from '@core/blockchain/web3-pure/web3-pure';
+import { TokenStruct } from 'src/core/blockchain/tokens/token';
+import { Web3Pure } from 'src/core/blockchain/web3-pure/web3-pure';
 
 export type PriceTokenAmountStruct = ConstructorParameters<typeof PriceToken>[number] &
     (

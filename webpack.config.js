@@ -14,7 +14,7 @@ module.exports = function(env, argv) {
                         {
                             loader: require.resolve('ts-loader'),
                             options: {
-                                compiler: 'ttypescript',
+                                compiler: 'typescript',
                             },
                         },
                     ], 

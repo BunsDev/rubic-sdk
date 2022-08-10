@@ -1,4 +1,4 @@
-import { TimeoutError } from '@common/errors/utils/timeout.error';
+import { TimeoutError } from 'src/common/errors/utils/timeout.error';
 
 export interface ClearablePromise<T> extends Promise<T> {
     clear: () => void;

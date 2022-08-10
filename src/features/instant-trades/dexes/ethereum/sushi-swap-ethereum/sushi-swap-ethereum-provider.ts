@@ -1,7 +1,7 @@
 import { BLOCKCHAIN_NAME } from 'src/core/blockchain/models/blockchain-name';
-import { UniswapV2AbstractProvider } from '@features/instant-trades/dexes/common/uniswap-v2-abstract/uniswap-v2-abstract-provider';
-import { SUSHI_SWAP_ETHEREUM_PROVIDER_CONFIGURATION } from '@features/instant-trades/dexes/ethereum/sushi-swap-ethereum/constants';
-import { SushiSwapEthereumTrade } from '@features/instant-trades/dexes/ethereum/sushi-swap-ethereum/sushi-swap-ethereum-trade';
+import { UniswapV2AbstractProvider } from 'src/features/instant-trades/dexes/common/uniswap-v2-abstract/uniswap-v2-abstract-provider';
+import { SUSHI_SWAP_ETHEREUM_PROVIDER_CONFIGURATION } from 'src/features/instant-trades/dexes/ethereum/sushi-swap-ethereum/constants';
+import { SushiSwapEthereumTrade } from 'src/features/instant-trades/dexes/ethereum/sushi-swap-ethereum/sushi-swap-ethereum-trade';
 
 export class SushiSwapEthereumProvider extends UniswapV2AbstractProvider<SushiSwapEthereumTrade> {
     public readonly blockchain = BLOCKCHAIN_NAME.ETHEREUM;
