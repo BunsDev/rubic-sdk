@@ -1,27 +1,41 @@
-import { BLOCKCHAIN_NAME } from 'src/core/blockchain/models/blockchain-name';
-import { PriceToken } from '@core/blockchain/tokens/price-token';
-import { PriceTokenAmount } from '@core/blockchain/tokens/price-token-amount';
-import { InstantTrade } from '@features/instant-trades/instant-trade';
-import { SwapCalculationOptions } from '@features/instant-trades/models/swap-calculation-options';
-import { Web3Public } from '@core/blockchain/web3-public/web3-public';
-import { Injector } from '@core/sdk/injector';
-import { GasPriceInfo } from '@features/instant-trades/models/gas-price-info';
-import { Web3Pure } from '@core/blockchain/web3-pure/web3-pure';
+import { BlockchainName } from 'src/core/blockchain/models/blockchain-name';
+import { PriceToken } from 'src/core/blockchain/tokens/price-token';
+import { PriceTokenAmount } from 'src/core/blockchain/tokens/price-token-amount';
+import { InstantTrade } from 'src/features/instant-trades/instant-trade';
+import { SwapCalculationOptions } from 'src/features/instant-trades/models/swap-calculation-options';
+import { Web3Public } from 'src/core/blockchain/web3-public/web3-public';
+import { Injector } from 'src/core/sdk/injector';
+import { GasPriceInfo } from 'src/features/instant-trades/models/gas-price-info';
+import { Web3Pure } from 'src/core/blockchain/web3-pure/web3-pure';
 import BigNumber from 'bignumber.js';
-import { GasFeeInfo } from '@features/instant-trades/models/gas-fee-info';
+import { GasFeeInfo } from 'src/features/instant-trades/models/gas-fee-info';
 import { TradeType } from 'src/features';
 
+/**
+ * Abstract class for all instant trade providers.
+ */
 export abstract class InstantTradeProvider {
-    public abstract readonly blockchain: BLOCKCHAIN_NAME;
+    /**
+     * Provider blockchain.
+     */
+    public abstract readonly blockchain: BlockchainName;
 
     protected abstract readonly gasMargin: number;
 
+    /**
+     * Type of provider.
+     */
     public abstract get type(): TradeType;
 
     protected get web3Public(): Web3Public {
         return Injector.web3PublicService.getWeb3Public(this.blockchain);
     }
-
+    /**
+     * Calculates instant trade.
+     * @param from Token to sell with input amount.
+     * @param to Token to get.
+     * @param options Additional options.
+     */
     public abstract calculate(
         from: PriceTokenAmount,
         to: PriceToken,

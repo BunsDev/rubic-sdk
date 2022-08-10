@@ -1,16 +1,16 @@
-import { TokenBaseStruct } from '@core/blockchain/models/token-base-struct';
-import { Token } from '@core/blockchain/tokens/token';
-import { PriceToken } from '@core/blockchain/tokens/price-token';
-import { PriceTokenAmount } from '@core/blockchain/tokens/price-token-amount';
+import { TokenBaseStruct } from 'src/core/blockchain/models/token-base-struct';
+import { Token } from 'src/core/blockchain/tokens/token';
+import { PriceToken } from 'src/core/blockchain/tokens/price-token';
+import { PriceTokenAmount } from 'src/core/blockchain/tokens/price-token-amount';
 import BigNumber from 'bignumber.js';
-import { BLOCKCHAIN_NAME } from 'src/core/blockchain/models/blockchain-name';
+import { BlockchainName } from 'src/core/blockchain/models/blockchain-name';
 
 export async function getPriceTokensFromInputTokens(
     from:
         | Token
         | {
               address: string;
-              blockchain: BLOCKCHAIN_NAME;
+              blockchain: BlockchainName;
           },
     fromAmount: string,
     to:
@@ -18,7 +18,7 @@ export async function getPriceTokensFromInputTokens(
         | string
         | {
               address: string;
-              blockchain: BLOCKCHAIN_NAME;
+              blockchain: BlockchainName;
           }
 ): Promise<{
     from: PriceTokenAmount;

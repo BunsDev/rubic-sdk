@@ -1,24 +1,25 @@
-import { InsufficientLiquidityError } from '@common/errors/swap/insufficient-liquidity.error';
-import { notNull } from '@common/utils/object';
-import { PriceToken } from '@core/blockchain/tokens/price-token';
-import { PriceTokenAmount } from '@core/blockchain/tokens/price-token-amount';
-import { Token } from '@core/blockchain/tokens/token';
-import { BatchCall } from '@core/blockchain/web3-public/models/batch-call';
-import { Web3Public } from '@core/blockchain/web3-public/web3-public';
-import { Web3Pure } from '@core/blockchain/web3-pure/web3-pure';
-import { Injector } from '@core/sdk/injector';
-import { SwapCalculationOptions } from '@features/instant-trades/models/swap-calculation-options';
+import { InsufficientLiquidityError } from 'src/common/errors/swap/insufficient-liquidity.error';
+import { notNull } from 'src/common/utils/object';
+import { PriceToken } from 'src/core/blockchain/tokens/price-token';
+import { PriceTokenAmount } from 'src/core/blockchain/tokens/price-token-amount';
+import { Token } from 'src/core/blockchain/tokens/token';
+import { BatchCall } from 'src/core/blockchain/web3-public/models/batch-call';
+import { Web3Public } from 'src/core/blockchain/web3-public/web3-public';
+import { Web3Pure } from 'src/core/blockchain/web3-pure/web3-pure';
+import { Injector } from 'src/core/sdk/injector';
+import { SwapCalculationOptions } from 'src/features/instant-trades/models/swap-calculation-options';
 import {
     UniswapCalculatedInfo,
     UniswapCalculatedInfoWithProfit
-} from '@features/instant-trades/dexes/common/uniswap-v2-abstract/models/uniswap-calculated-info';
-import { UniswapRoute } from '@features/instant-trades/dexes/common/uniswap-v2-abstract/models/uniswap-route';
-import { UniswapV2ProviderConfiguration } from '@features/instant-trades/dexes/common/uniswap-v2-abstract/models/uniswap-v2-provider-configuration';
-import { UniswapV2TradeClass } from '@features/instant-trades/dexes/common/uniswap-v2-abstract/models/uniswap-v2-trade-class';
-import { UniswapV2AbstractTrade } from '@features/instant-trades/dexes/common/uniswap-v2-abstract/uniswap-v2-abstract-trade';
+} from 'src/features/instant-trades/dexes/common/uniswap-v2-abstract/models/uniswap-calculated-info';
+import { UniswapRoute } from 'src/features/instant-trades/dexes/common/uniswap-v2-abstract/models/uniswap-route';
+import { UniswapV2ProviderConfiguration } from 'src/features/instant-trades/dexes/common/uniswap-v2-abstract/models/uniswap-v2-provider-configuration';
+import { UniswapV2TradeClass } from 'src/features/instant-trades/dexes/common/uniswap-v2-abstract/models/uniswap-v2-trade-class';
+import { UniswapV2AbstractTrade } from 'src/features/instant-trades/dexes/common/uniswap-v2-abstract/uniswap-v2-abstract-trade';
 import BigNumber from 'bignumber.js';
-import { Cache } from 'src/common';
-import { Exact } from '@features/instant-trades/models/exact';
+import { Cache, RubicSdkError } from 'src/common';
+import { Exact } from 'src/features/instant-trades/models/exact';
+import { hasLengthAtLeast } from 'src/features/instant-trades/utils/type-guards';
 
 export interface PathFactoryStruct {
     readonly from: PriceToken;
@@ -95,6 +96,9 @@ export class PathFactory<T extends UniswapV2AbstractTrade> {
         }
 
         if (this.options.gasCalculation === 'disabled') {
+            if (!hasLengthAtLeast(routes, 1)) {
+                throw new RubicSdkError('Routes array length has to be bigger than 0');
+            }
             return {
                 route: routes[0]
             };
@@ -124,6 +128,9 @@ export class PathFactory<T extends UniswapV2AbstractTrade> {
             const routesWithProfit: UniswapCalculatedInfoWithProfit[] = routes.map(
                 (route, index) => {
                     const estimatedGas = gasLimits[index];
+                    if (!estimatedGas) {
+                        throw new RubicSdkError('Estimated gas has to be defined');
+                    }
                     const gasFeeInUsd = estimatedGas.multipliedBy(gasPriceInUsd);
                     let profit: BigNumber;
                     if (this.exact === 'input') {
@@ -149,6 +156,10 @@ export class PathFactory<T extends UniswapV2AbstractTrade> {
                 b.profit.comparedTo(a.profit)
             );
 
+            if (!sortedByProfitRoutes?.[0]) {
+                throw new RubicSdkError('Profit routes array length has to be bigger than 0');
+            }
+
             return sortedByProfitRoutes[0];
         }
 
@@ -156,6 +167,9 @@ export class PathFactory<T extends UniswapV2AbstractTrade> {
 
         if (this.walletAddress) {
             const callData = this.getGasRequests(routes.slice(0, 1))[0];
+            if (!callData) {
+                throw new RubicSdkError('Call data has to be defined');
+            }
             const estimatedGas = await this.web3Public.getEstimatedGas(
                 this.InstantTradeClass.contractAbi,
                 this.InstantTradeClass.getContractAddress(this.from.blockchain),
@@ -167,6 +181,10 @@ export class PathFactory<T extends UniswapV2AbstractTrade> {
             if (estimatedGas?.isFinite()) {
                 gasLimit = estimatedGas;
             }
+        }
+
+        if (!routes?.[0]) {
+            throw new RubicSdkError('Routes length has to be bigger than 0');
         }
 
         return {
@@ -248,20 +266,26 @@ export class PathFactory<T extends UniswapV2AbstractTrade> {
             routesMethodArguments
         );
 
-        return responses
-            .map((response, index) => {
-                if (!response.success || !response.output) {
-                    return null;
-                }
-                const { amounts } = response.output;
-                const amount = new BigNumber(
-                    this.exact === 'input' ? amounts[amounts.length - 1] : amounts[0]
-                );
-                return {
-                    outputAbsoluteAmount: amount,
-                    path: routesPaths[index]
-                };
-            })
-            .filter(notNull);
+        const tokens = responses.map((response, index) => {
+            if (!response.success || !response.output) {
+                return null;
+            }
+            const { amounts } = response.output;
+
+            const numberAmount = this.exact === 'input' ? amounts[amounts.length - 1] : amounts[0];
+            if (!numberAmount) {
+                throw new RubicSdkError('Amount has to be defined');
+            }
+            const outputAbsoluteAmount = new BigNumber(numberAmount);
+
+            const path = routesPaths?.[index];
+            if (!path) {
+                throw new RubicSdkError('Path has to be defined');
+            }
+
+            return { outputAbsoluteAmount, path };
+        });
+
+        return tokens.filter(notNull);
     }
 }

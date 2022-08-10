@@ -1,35 +1,64 @@
-import { RubicSdkError } from '@common/errors/rubic-sdk.error';
-import { WalletNotConnectedError } from '@common/errors/swap/wallet-not-connected.error';
-import { WrongNetworkError } from '@common/errors/swap/wrong-network.error';
-import { BasicTransactionOptions } from '@core/blockchain/models/basic-transaction-options';
-import { TransactionOptions } from '@core/blockchain/models/transaction-options';
-import { PriceTokenAmount } from '@core/blockchain/tokens/price-token-amount';
-import { Injector } from '@core/sdk/injector';
-import { EncodeTransactionOptions } from '@features/instant-trades/models/encode-transaction-options';
-import { GasFeeInfo } from '@features/instant-trades/models/gas-fee-info';
-import { SwapTransactionOptions } from '@features/instant-trades/models/swap-transaction-options';
-import { TradeType } from 'src/features';
+import { RubicSdkError } from 'src/common/errors/rubic-sdk.error';
+import { WalletNotConnectedError } from 'src/common/errors/swap/wallet-not-connected.error';
+import { WrongNetworkError } from 'src/common/errors/swap/wrong-network.error';
+import { BasicTransactionOptions } from 'src/core/blockchain/models/basic-transaction-options';
+import { PriceTokenAmount } from 'src/core/blockchain/tokens/price-token-amount';
+import { Injector } from 'src/core/sdk/injector';
+import { EncodeTransactionOptions } from 'src/features/instant-trades/models/encode-transaction-options';
+import { GasFeeInfo } from 'src/features/instant-trades/models/gas-fee-info';
+import { SwapTransactionOptions } from 'src/features/instant-trades/models/swap-transaction-options';
 import { TransactionConfig } from 'web3-core';
 import { TransactionReceipt } from 'web3-eth';
-import { Web3Public } from '@core/blockchain/web3-public/web3-public';
-import { BLOCKCHAIN_NAME } from 'src/core/blockchain/models/blockchain-name';
-import { OptionsGasParams, TransactionGasParams } from '@features/instant-trades/models/gas-params';
+import { Web3Public } from 'src/core/blockchain/web3-public/web3-public';
+import { BLOCKCHAIN_NAME, BlockchainName } from 'src/core/blockchain/models/blockchain-name';
+import {
+    OptionsGasParams,
+    TransactionGasParams
+} from 'src/features/instant-trades/models/gas-params';
+import { Cache, UnnecessaryApproveError } from 'src/common';
+import { TradeType } from 'src/features';
+import { parseError } from 'src/common/utils/errors';
+import { Token, TransactionOptions } from 'src/core';
+import BigNumber from 'bignumber.js';
 
+/**
+ * Abstract class for all instant trade providers' trades.
+ */
 export abstract class InstantTrade {
+    /**
+     * Token to sell with input amount.
+     */
     public abstract readonly from: PriceTokenAmount;
 
+    /**
+     * Token to get with output amount.
+     */
     public abstract readonly to: PriceTokenAmount;
 
+    /**
+     * Gas fee info, including gas limit and gas price.
+     */
     public abstract gasFeeInfo: GasFeeInfo | null;
 
+    /**
+     * Slippage tolerance. Can be mutated after calculation, except for Zrx.
+     */
     public abstract slippageTolerance: number;
 
-    protected abstract contractAddress: string; // not static because https://github.com/microsoft/TypeScript/issues/34516
+    protected abstract readonly contractAddress: string; // not static because https://github.com/microsoft/TypeScript/issues/34516
 
     protected readonly web3Public: Web3Public;
 
+    /**
+     * Type of instant trade provider.
+     */
     public abstract get type(): TradeType;
 
+    public abstract readonly path: ReadonlyArray<Token>;
+
+    /**
+     * Minimum amount of output token user can get.
+     */
     public get toTokenAmountMin(): PriceTokenAmount {
         const weiAmountOutMin = this.to.weiAmountMinusSlippage(this.slippageTolerance);
         return new PriceTokenAmount({ ...this.to.asStruct, weiAmount: weiAmountOutMin });
@@ -39,12 +68,25 @@ export abstract class InstantTrade {
         return Injector.web3Private.address;
     }
 
-    protected constructor(blockchain: BLOCKCHAIN_NAME) {
+    /**
+     * Price impact, based on tokens' usd prices.
+     */
+    @Cache
+    public get priceImpact(): number | null {
+        return this.from.calculatePriceImpactPercent(this.to);
+    }
+
+    protected constructor(blockchain: BlockchainName) {
         this.web3Public = Injector.web3PublicService.getWeb3Public(blockchain);
     }
 
-    public async needApprove(): Promise<boolean> {
-        this.checkWalletConnected();
+    /**
+     * Returns true, if allowance is not enough.
+     */
+    public async needApprove(fromAddress?: string): Promise<boolean> {
+        if (!fromAddress) {
+            this.checkWalletConnected();
+        }
 
         if (this.from.isNative) {
             return false;
@@ -52,30 +94,60 @@ export abstract class InstantTrade {
 
         const allowance = await this.web3Public.getAllowance(
             this.from.address,
-            this.walletAddress,
+            fromAddress || this.walletAddress,
             this.contractAddress
         );
         return allowance.lt(this.from.weiAmount);
     }
 
-    public async approve(options?: BasicTransactionOptions): Promise<TransactionReceipt> {
-        const needApprove = await this.needApprove();
-
-        if (!needApprove) {
-            throw new RubicSdkError(
-                'You should check allowance via `needApprove` method before calling `approve`. Current allowance is enough for swap.'
-            );
+    /**
+     * Sends approve transaction with connected wallet.
+     * @param options Transaction options.
+     * @param checkNeedApprove If true, first allowance is checked.
+     */
+    public async approve(
+        options: BasicTransactionOptions,
+        checkNeedApprove = true
+    ): Promise<TransactionReceipt> {
+        if (checkNeedApprove) {
+            const needApprove = await this.needApprove();
+            if (!needApprove) {
+                throw new UnnecessaryApproveError();
+            }
         }
 
         this.checkWalletConnected();
         this.checkBlockchainCorrect();
 
+        const approveAmount =
+            this.from.blockchain === BLOCKCHAIN_NAME.GNOSIS ||
+            this.from.blockchain === BLOCKCHAIN_NAME.CRONOS
+                ? this.from.weiAmount
+                : 'infinity';
+
         return Injector.web3Private.approveTokens(
             this.from.address,
             this.contractAddress,
-            'infinity',
-            { ...options, gas: options?.gasLimit }
+            approveAmount,
+            options
         );
+    }
+
+    /**
+     * Build encoded approve transaction config.
+     * @param tokenAddress Address of the smart-contract corresponding to the token.
+     * @param spenderAddress Wallet or contract address to approve.
+     * @param value Token amount to approve in wei.
+     * @param [options] Additional options.
+     * @returns Encoded approve transaction config.
+     */
+    public async encodeApprove(
+        tokenAddress: string,
+        spenderAddress: string,
+        value: BigNumber | 'infinity',
+        options: TransactionOptions = {}
+    ): Promise<TransactionConfig> {
+        return Injector.web3Private.encodeApprove(tokenAddress, spenderAddress, value, options);
     }
 
     protected async checkAllowanceAndApprove(
@@ -86,23 +158,34 @@ export abstract class InstantTrade {
             return;
         }
 
-        const txOptions: TransactionOptions = {
+        const approveOptions: BasicTransactionOptions = {
             onTransactionHash: options?.onApprove,
-            gas: options?.gasLimit || undefined,
+            gas: options?.approveGasLimit || undefined,
             gasPrice: options?.gasPrice || undefined
         };
 
-        await Injector.web3Private.approveTokens(
-            this.from.address,
-            this.contractAddress,
-            'infinity',
-            txOptions
-        );
+        await this.approve(approveOptions, false);
     }
 
+    /**
+     * Sends swap transaction with connected wallet.
+     * If user has not enough allowance, then approve transaction will be called first.
+     *
+     * @example
+     * ```ts
+     * const onConfirm = (hash: string) => console.log(hash);
+     * const receipt = await trades[TRADE_TYPE.UNISWAP_V2].swap({ onConfirm });
+     * ```
+     *
+     * @param options Transaction options.
+     */
     public abstract swap(options?: SwapTransactionOptions): Promise<TransactionReceipt>;
 
-    public abstract encode(options?: EncodeTransactionOptions): Promise<TransactionConfig>;
+    /**
+     * Builds transaction config, with encoded data.
+     * @param options Encode transaction options.
+     */
+    public abstract encode(options: EncodeTransactionOptions): Promise<TransactionConfig>;
 
     protected async checkWalletState(): Promise<void> {
         this.checkWalletConnected();
@@ -122,33 +205,14 @@ export abstract class InstantTrade {
         }
     }
 
-    protected getGasLimit(options?: { gasLimit?: string }): string | undefined {
-        if (options?.gasLimit) {
-            return options.gasLimit;
-        }
-        if (this.gasFeeInfo?.gasLimit?.isFinite()) {
-            return this.gasFeeInfo.gasLimit.toFixed(0);
-        }
-        return undefined;
-    }
-
-    protected getGasPrice(options?: { gasPrice?: string }): string | undefined {
-        if (options?.gasPrice) {
-            return options.gasPrice;
-        }
-        if (this.gasFeeInfo?.gasPrice?.isFinite()) {
-            return this.gasFeeInfo.gasPrice.toFixed();
-        }
-        return undefined;
-    }
-
     protected getGasParams(options: OptionsGasParams): TransactionGasParams {
-        const gas = this.getGasLimit({
-            gasLimit: options.gasLimit
-        });
-        const gasPrice = this.getGasPrice({
-            gasPrice: options.gasPrice
-        });
-        return { gas, gasPrice };
+        return {
+            gas: options.gasLimit || this.gasFeeInfo?.gasLimit?.toFixed(),
+            gasPrice: options.gasPrice || this.gasFeeInfo?.gasPrice?.toFixed()
+        };
+    }
+
+    protected parseError(err: unknown): RubicSdkError {
+        return parseError(err, 'Cannot calculate instant trade');
     }
 }

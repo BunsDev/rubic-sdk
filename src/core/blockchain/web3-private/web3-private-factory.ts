@@ -1,10 +1,10 @@
-import { WrongChainIdError } from '@common/errors/provider/wrong-chain-id.error';
-import { RubicSdkError } from '@common/errors/rubic-sdk.error';
-import { BlockchainsInfo } from '@core/blockchain/blockchains-info';
-import { BLOCKCHAIN_NAME } from 'src/core/blockchain/models/blockchain-name';
-import { WalletConnectionConfiguration } from '@core/blockchain/models/wallet-connection-configuration';
-import { Web3Private } from '@core/blockchain/web3-private/web3-private';
-import { WalletProvider } from '@core/sdk/models/configuration';
+import { WrongChainIdError } from 'src/common/errors/provider/wrong-chain-id.error';
+import { RubicSdkError } from 'src/common/errors/rubic-sdk.error';
+import { BlockchainsInfo } from 'src/core/blockchain/blockchains-info';
+import { BlockchainName } from 'src/core/blockchain/models/blockchain-name';
+import { WalletConnectionConfiguration } from 'src/core/blockchain/models/wallet-connection-configuration';
+import { Web3Private } from 'src/core/blockchain/web3-private/web3-private';
+import { WalletProvider } from 'src/core/sdk/models/configuration';
 import BigNumber from 'bignumber.js';
 import Web3 from 'web3';
 import { provider } from 'web3-core';
@@ -14,7 +14,7 @@ export class Web3PrivateFactory {
 
     private address: string | undefined;
 
-    private blockchainName: BLOCKCHAIN_NAME | undefined;
+    private blockchainName: BlockchainName | undefined;
 
     public static async createWeb3Private(walletProvider?: WalletProvider): Promise<Web3Private> {
         if (!walletProvider) {
@@ -53,7 +53,7 @@ export class Web3PrivateFactory {
 
     constructor(
         private readonly core: provider | Web3,
-        private readonly walletAddrrss: string,
+        private readonly walletAddress: string,
         private readonly chainId: number
     ) {}
 
@@ -95,7 +95,7 @@ export class Web3PrivateFactory {
             throw new RubicSdkError('Web3 is not initialized');
         }
 
-        this.address = this.web3.utils.toChecksumAddress(this.walletAddrrss);
+        this.address = this.web3.utils.toChecksumAddress(this.walletAddress);
     }
 
     private createWeb3PrivateInstance(): Web3Private {

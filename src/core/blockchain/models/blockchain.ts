@@ -1,8 +1,11 @@
-import { BLOCKCHAIN_NAME } from 'src/core/blockchain/models/blockchain-name';
-import { Token } from '@core/blockchain/tokens/token';
+import { BlockchainName } from 'src/core/blockchain/models/blockchain-name';
+import { Token } from 'src/core/blockchain/tokens/token';
 
+/**
+ * Stores information about blockchain.
+ */
 export interface Blockchain {
     id: number;
-    name: BLOCKCHAIN_NAME;
+    name: BlockchainName;
     nativeCoin: Token;
 }

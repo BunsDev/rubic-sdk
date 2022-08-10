@@ -33,6 +33,15 @@ export const TRADE_TYPE = {
     ONE_INCH: 'ONE_INCH',
     UNI_SWAP_V3: 'UNI_SWAP_V3',
     ZRX: 'ZRX',
+    OPEN_OCEAN: 'OPEN_OCEAN',
+    PARA_SWAP: 'PARA_SWAP',
+    DODO: 'DODO',
+    HONEY_SWAP: 'HONEY_SWAP',
+    STELLA_SWAP: 'STELLA_SWAP',
+    UBE_SWAP: 'UBE_SWAP',
+    BEAM_SWAP: 'BEAM_SWAP',
+    J_SWAP: 'J_SWAP',
+    CRONA_SWAP: 'CRONA_SWAP',
 } as const;
 
 export type TradeType = keyof typeof TRADE_TYPE;

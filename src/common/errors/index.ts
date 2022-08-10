@@ -7,6 +7,7 @@ export { LowSlippageError } from './swap/low-slippage.error';
 export { LowSlippageDeflationaryTokenError } from './swap/low-slippage-deflationary-token.error';
 export { NotSupportedBlockchain } from './swap/not-supported-blockchain';
 export { UnnecessaryApprove } from './swap/unnecessary-approve';
+export { UnnecessaryApproveError } from './swap/unnecessary-approve.error';
 export { WalletNotConnectedError } from './swap/wallet-not-connected.error';
 export { WrongNetworkError } from './swap/wrong-network.error';
 export { WrongChainIdError } from './provider/wrong-chain-id.error';

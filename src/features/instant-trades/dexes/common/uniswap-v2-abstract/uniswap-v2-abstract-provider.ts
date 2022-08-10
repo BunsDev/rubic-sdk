@@ -1,25 +1,27 @@
-import { GasPriceApi } from '@common/http/gas-price-api';
-import { combineOptions } from '@common/utils/options';
-import { PriceToken } from '@core/blockchain/tokens/price-token';
-import { PriceTokenAmount } from '@core/blockchain/tokens/price-token-amount';
-import { GasPriceInfo } from '@features/instant-trades/models/gas-price-info';
-import { SwapCalculationOptions } from '@features/instant-trades/models/swap-calculation-options';
-import { UniswapV2ProviderConfiguration } from '@features/instant-trades/dexes/common/uniswap-v2-abstract/models/uniswap-v2-provider-configuration';
-import { UniswapV2TradeClass } from '@features/instant-trades/dexes/common/uniswap-v2-abstract/models/uniswap-v2-trade-class';
-import { PathFactory } from '@features/instant-trades/dexes/common/uniswap-v2-abstract/path-factory';
-import { InstantTradeProvider } from '@features/instant-trades/instant-trade-provider';
-import { UniswapV2AbstractTrade } from '@features/instant-trades/dexes/common/uniswap-v2-abstract/uniswap-v2-abstract-trade';
+import { combineOptions } from 'src/common/utils/options';
+import { PriceToken } from 'src/core/blockchain/tokens/price-token';
+import { PriceTokenAmount } from 'src/core/blockchain/tokens/price-token-amount';
+import { GasPriceInfo } from 'src/features/instant-trades/models/gas-price-info';
+import { SwapCalculationOptions } from 'src/features/instant-trades/models/swap-calculation-options';
+import { UniswapV2ProviderConfiguration } from 'src/features/instant-trades/dexes/common/uniswap-v2-abstract/models/uniswap-v2-provider-configuration';
+import { UniswapV2TradeClass } from 'src/features/instant-trades/dexes/common/uniswap-v2-abstract/models/uniswap-v2-trade-class';
+import { PathFactory } from 'src/features/instant-trades/dexes/common/uniswap-v2-abstract/path-factory';
+import { InstantTradeProvider } from 'src/features/instant-trades/instant-trade-provider';
+import { UniswapV2AbstractTrade } from 'src/features/instant-trades/dexes/common/uniswap-v2-abstract/uniswap-v2-abstract-trade';
 import BigNumber from 'bignumber.js';
-import { UniswapCalculatedInfo } from '@features/instant-trades/dexes/common/uniswap-v2-abstract/models/uniswap-calculated-info';
-import { createTokenNativeAddressProxy } from '@features/instant-trades/dexes/common/utils/token-native-address-proxy';
+import { UniswapCalculatedInfo } from 'src/features/instant-trades/dexes/common/uniswap-v2-abstract/models/uniswap-calculated-info';
+import { createTokenNativeAddressProxy } from 'src/features/instant-trades/dexes/common/utils/token-native-address-proxy';
 import { TradeType } from 'src/features';
-import { Exact } from '@features/instant-trades/models/exact';
+import { Exact } from 'src/features/instant-trades/models/exact';
+import { EMPTY_ADDRESS } from 'src/core/blockchain/constants/empty-address';
 
 export abstract class UniswapV2AbstractProvider<
     T extends UniswapV2AbstractTrade = UniswapV2AbstractTrade
 > extends InstantTradeProvider {
+    /** @internal */
     public abstract readonly InstantTradeClass: UniswapV2TradeClass<T>;
 
+    /** @internal */
     public abstract readonly providerSettings: UniswapV2ProviderConfiguration;
 
     public get type(): TradeType {
@@ -30,7 +32,9 @@ export abstract class UniswapV2AbstractProvider<
         gasCalculation: 'calculate',
         disableMultihops: false,
         deadlineMinutes: 20,
-        slippageTolerance: 0.02
+        slippageTolerance: 0.02,
+        wrappedAddress: EMPTY_ADDRESS,
+        fromAddress: ''
     };
 
     protected readonly gasMargin = 1.2;
@@ -43,6 +47,12 @@ export abstract class UniswapV2AbstractProvider<
         return this.calculateDifficultTrade(from, to, from.weiAmount, 'input', options);
     }
 
+    /**
+     * Calculates trade, based on amount, user wants to get.
+     * @param from Token to sell.
+     * @param to Token to get with output amount.
+     * @param options Additional options.
+     */
     public async calculateExactOutput(
         from: PriceToken,
         to: PriceTokenAmount,
@@ -51,6 +61,12 @@ export abstract class UniswapV2AbstractProvider<
         return this.calculateDifficultTrade(from, to, to.weiAmount, 'output', options);
     }
 
+    /**
+     * Calculates input amount, based on amount, user wants to get.
+     * @param from Token to sell.
+     * @param to Token to get with output amount.
+     * @param options Additional options.
+     */
     public async calculateExactOutputAmount(
         from: PriceToken,
         to: PriceTokenAmount,
@@ -59,6 +75,14 @@ export abstract class UniswapV2AbstractProvider<
         return (await this.calculateExactOutput(from, to, options)).from.tokenAmount;
     }
 
+    /**
+     * Calculates instant trade.
+     * @param from Token to sell.
+     * @param to Token to get.
+     * @param weiAmount Amount to sell or to get in wei.
+     * @param exact Defines, whether to call 'exactInput' or 'exactOutput' method.
+     * @param options Additional options.
+     */
     public async calculateDifficultTrade(
         from: PriceToken,
         to: PriceToken,
@@ -75,10 +99,7 @@ export abstract class UniswapV2AbstractProvider<
         const toProxy = createTokenNativeAddressProxy(to, this.providerSettings.wethAddress);
 
         let gasPriceInfo: GasPriceInfo | undefined;
-        if (
-            fullOptions.gasCalculation !== 'disabled' &&
-            GasPriceApi.isSupportedBlockchain(from.blockchain)
-        ) {
+        if (fullOptions.gasCalculation !== 'disabled') {
             gasPriceInfo = await this.getGasPriceInfo();
         }
 
