@@ -48,7 +48,6 @@
     "analyze": "webpack --profile --json > stats.json &&  webpack-bundle-analyzer stats.json"
   },
   "dependencies": {
-    "@lifi/sdk": "^1.0.2",
     "assert": "^2.0.0",
     "axios": "^0.22.0",
     "bignumber.js": "^9.0.1",

@@ -23,9 +23,4 @@ export interface CrossChainTradeData {
      * Source transaction hash.
      */
     srcTxHash: string;
-
-    /**
-     * Li-fi bridge type.
-     */
-    lifiBridgeType?: string;
 }

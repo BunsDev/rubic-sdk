@@ -20,7 +20,6 @@ import { ZrxTradeProviders } from 'src/features/instant-trades/constants/zrx-tra
 import { AlgebraTradeProviders } from 'src/features/instant-trades/constants/algebra-trade-providers';
 import { InstantTradeError } from 'src/features/instant-trades/models/instant-trade-error';
 import { oneinchApiParams } from 'src/features/instant-trades/dexes/common/oneinch-common/constants';
-import { LifiProvider } from 'src/features/instant-trades/dexes/common/lifi/lifi-provider';
 import { blockchains } from 'src/core/blockchain/constants/blockchains';
 
 export type RequiredSwapManagerCalculationOptions = MarkRequired<
@@ -70,8 +69,6 @@ export class InstantTradesManager {
             {} as Mutable<TypedTradeProviders>
         )
     );
-
-    public readonly lifiProvider = new LifiProvider();
 
     /**
      * Calculates instant trades, sorted by output amount.
@@ -164,18 +161,11 @@ export class InstantTradesManager {
                 }
             })
         );
-        const lifiTradesPromise = this.calculateLifiTrades(
-            from,
-            to,
-            providers.map(provider => provider[0]),
-            options
-        );
 
-        const [instantTrades, lifiTrades] = await Promise.all([
+        const [instantTrades] = await Promise.all([
             instantTradesPromise,
-            lifiTradesPromise
         ]);
-        const trades = instantTrades.concat(lifiTrades);
+        const trades = instantTrades.concat();
 
         return trades.sort((tradeA, tradeB) => {
             if (tradeA instanceof InstantTrade || tradeB instanceof InstantTrade) {
@@ -188,20 +178,6 @@ export class InstantTradesManager {
                 return -1;
             }
             return 0;
-        });
-    }
-
-    private async calculateLifiTrades(
-        from: PriceTokenAmount,
-        to: PriceToken,
-        providers: TradeType[],
-        options: RequiredSwapManagerCalculationOptions
-    ): Promise<InstantTrade[]> {
-        const disabledProviders = providers.concat(options.disabledProviders);
-
-        return this.lifiProvider.calculate(from, to, disabledProviders, {
-            slippageTolerance: options.slippageTolerance,
-            gasCalculation: options.gasCalculation === 'disabled' ? 'disabled' : 'calculate'
         });
     }
 }

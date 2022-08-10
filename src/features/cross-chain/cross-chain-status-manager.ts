@@ -14,7 +14,6 @@ import { RubicSwapStatus } from './providers/common/celer-rubic/models/rubic-swa
 import { PROCESSED_TRANSACTION_METHOD_ABI } from './providers/common/celer-rubic/constants/processed-transactios-method-abi';
 import { CrossChainStatus } from './models/cross-chain-status';
 import { CrossChainTxStatus } from './models/cross-chain-tx-status';
-import { LifiSwapStatus } from './providers/lifi-trade-provider/models/lifi-swap-status';
 import { SymbiosisSwapStatus } from './providers/symbiosis-trade-provider/models/symbiosis-swap-status';
 import { CrossChainTradeData } from './models/cross-chain-trade-data';
 import { RubicCrossChainSupportedBlockchain } from './providers/rubic-trade-provider/constants/rubic-cross-chain-supported-blockchains';
@@ -55,7 +54,6 @@ export class CrossChainStatusManager {
     private readonly getDstTxStatusFnMap: Record<CrossChainTradeType, getDstTxStatusFn> = {
         [CROSS_CHAIN_TRADE_TYPE.CELER]: this.getCelerDstSwapStatus,
         [CROSS_CHAIN_TRADE_TYPE.RUBIC]: this.getRubicDstSwapStatus,
-        [CROSS_CHAIN_TRADE_TYPE.LIFI]: this.getLifiDstSwapStatus,
         [CROSS_CHAIN_TRADE_TYPE.SYMBIOSIS]: this.getSymbiosisDstSwapStatus,
         [CROSS_CHAIN_TRADE_TYPE.DEBRIDGE]: this.getDebridgeDstSwapStatus
     };
@@ -199,55 +197,6 @@ export class CrossChainStatusManager {
         }
 
         return CrossChainTxStatus.PENDING;
-    }
-
-    /**
-     * Get Li-fi trade dst transaction status.
-     * @param data Trade data.
-     * @param srcTxReceipt Source transaction receipt.
-     * @returns Cross-chain transaction status.
-     */
-    private async getLifiDstSwapStatus(
-        data: CrossChainTradeData,
-        srcTxReceipt: TransactionReceipt
-    ): Promise<CrossChainTxStatus> {
-        if (!data.lifiBridgeType) {
-            return CrossChainTxStatus.PENDING;
-        }
-
-        try {
-            const params = {
-                bridge: data.lifiBridgeType,
-                fromChain: BlockchainsInfo.getBlockchainByName(data.fromBlockchain).id,
-                toChain: BlockchainsInfo.getBlockchainByName(data.toBlockchain).id,
-                txHash: srcTxReceipt.transactionHash
-            };
-            const { status } = await Injector.httpClient.get<{ status: LifiSwapStatus }>(
-                'https://li.quest/v1/status',
-                { params }
-            );
-
-            if (status === LifiSwapStatus.DONE) {
-                return CrossChainTxStatus.SUCCESS;
-            }
-
-            if (status === LifiSwapStatus.FAILED) {
-                return CrossChainTxStatus.FAIL;
-            }
-
-            if (status === LifiSwapStatus.INVALID) {
-                return CrossChainTxStatus.UNKNOWN;
-            }
-
-            if (status === LifiSwapStatus.NOT_FOUND || status === LifiSwapStatus.PENDING) {
-                return CrossChainTxStatus.PENDING;
-            }
-
-            return CrossChainTxStatus.UNKNOWN;
-        } catch (error) {
-            console.debug('[Li-fi Trade] error retrieving tx status', error);
-            return CrossChainTxStatus.PENDING;
-        }
     }
 
     /**
