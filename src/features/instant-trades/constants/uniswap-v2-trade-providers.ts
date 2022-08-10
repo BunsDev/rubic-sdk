@@ -9,6 +9,7 @@ import { PangolinProvider } from 'src/features/instant-trades/dexes/avalanche/pa
 import { SushiSwapAvalancheProvider } from 'src/features/instant-trades/dexes/avalanche/sushi-swap-avalanche/sushi-swap-avalanche-provider';
 import { SolarbeamProvider } from 'src/features/instant-trades/dexes/moonriver/solarbeam/solarbeam-provider';
 import { SushiSwapMoonriverProvider } from 'src/features/instant-trades/dexes/moonriver/sushi-swap-moonriver/sushi-swap-moonriver-provider';
+import { SoulSwapProvider } from 'src/features/instant-trades/dexes/fantom/soul-swap/soul-swap-provider';
 import { SpiritSwapProvider } from 'src/features/instant-trades/dexes/fantom/spirit-swap/spirit-swap-provider';
 import { SpookySwapProvider } from 'src/features/instant-trades/dexes/fantom/spooky-swap/spooky-swap-provider';
 import { SushiSwapFantomProvider } from 'src/features/instant-trades/dexes/fantom/sushi-swap-fantom/sushi-swap-fantom-provider';
@@ -39,6 +40,7 @@ export const UniswapV2TradeProviders = [
     SolarbeamProvider,
     SushiSwapMoonriverProvider,
     // fantom
+    SoulSwapProvider,
     SpiritSwapProvider,
     SpookySwapProvider,
     SushiSwapFantomProvider,

@@ -22,7 +22,6 @@ import { InstantTradeError } from 'src/features/instant-trades/models/instant-tr
 import { oneinchApiParams } from 'src/features/instant-trades/dexes/common/oneinch-common/constants';
 import { LifiProvider } from 'src/features/instant-trades/dexes/common/lifi/lifi-provider';
 import { blockchains } from 'src/core/blockchain/constants/blockchains';
-import { Injector } from 'src/core/sdk/injector';
 
 export type RequiredSwapManagerCalculationOptions = MarkRequired<
     SwapManagerCalculationOptions,
@@ -35,10 +34,6 @@ export type RequiredSwapManagerCalculationOptions = MarkRequired<
 export class InstantTradesManager {
     public static readonly defaultCalculationTimeout = 3_000;
 
-    public static readonly defaultWrappedAddress = '0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83';
-
-    static walletAddress = Injector.web3Private.address;
-
     private static getFullOptions(
         options?: SwapManagerCalculationOptions
     ): RequiredSwapManagerCalculationOptions {
@@ -49,8 +44,8 @@ export class InstantTradesManager {
             disableMultihops: false,
             slippageTolerance: 0.02,
             deadlineMinutes: 20,
-            fromAddress: InstantTradesManager.walletAddress,
-            wrappedAddress: InstantTradesManager.defaultWrappedAddress
+            fromAddress: '', 
+            wrappedAddress: ''
         });
     }
 
@@ -66,7 +61,6 @@ export class InstantTradesManager {
     ].reduce(
         (acc, ProviderClass) => {
             const provider = new ProviderClass();
-            // @ts-ignore
             acc[provider.blockchain][provider.type] = provider;
             return acc;
         },
