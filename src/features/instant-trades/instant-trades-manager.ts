@@ -43,9 +43,7 @@ export class InstantTradesManager {
             gasCalculation: 'calculate',
             disableMultihops: false,
             slippageTolerance: 0.02,
-            deadlineMinutes: 20,
-            fromAddress: '', 
-            wrappedAddress: ''
+            deadlineMinutes: 20
         });
     }
 
