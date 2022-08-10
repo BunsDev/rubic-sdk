@@ -1,17 +1,30 @@
-import { blockchains } from '@core/blockchain/constants/blockchains';
-import { Blockchain } from '@core/blockchain/models/blockchain';
-import { BLOCKCHAIN_NAME } from 'src/core/blockchain/models/blockchain-name';
+import { blockchains } from 'src/core/blockchain/constants/blockchains';
+import { Blockchain } from 'src/core/blockchain/models/blockchain';
+import { BlockchainName } from 'src/core/blockchain/models/blockchain-name';
 import BigNumber from 'bignumber.js';
 
+/**
+ * Works with list of all used in project blockchains.
+ * Contains method to find info about certain blockchain.
+ */
 export class BlockchainsInfo {
+    /**
+     * An array of all blockchains, used in project.
+     */
     public static readonly blockchains: ReadonlyArray<Blockchain> = blockchains;
 
+    /**
+     * Finds blockchain object, based on provided chain id.
+     */
     public static getBlockchainById(chainId: string | number): Blockchain | undefined {
         const chainIdNumber = new BigNumber(chainId).toNumber();
         return BlockchainsInfo.blockchains.find(blockchain => blockchain.id === chainIdNumber);
     }
 
-    public static getBlockchainByName(blockchainName: BLOCKCHAIN_NAME): Blockchain {
+    /**
+     * Finds blockchain object, based on provided blockchain name.
+     */
+    public static getBlockchainByName(blockchainName: BlockchainName): Blockchain {
         return BlockchainsInfo.blockchains.find(blockchain => blockchain.name === blockchainName)!;
     }
 }

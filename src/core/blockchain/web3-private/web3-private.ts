@@ -441,7 +441,7 @@ export class Web3Private {
         const test = ignoreCallErrors.some(err =>
             error?.message?.toLowerCase().includes(err.toLowerCase())
         );
-        console.log(test);
+        // console.log(test);
         return test;
     }
 }

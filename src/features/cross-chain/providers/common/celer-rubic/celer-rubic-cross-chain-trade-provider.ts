@@ -14,9 +14,9 @@ import { MinMaxAmounts } from 'src/features/cross-chain/models/min-max-amounts';
 import { PriceToken } from 'src/core/blockchain/tokens/price-token';
 import { ItCalculatedTrade } from 'src/features/cross-chain/providers/common/celer-rubic/models/it-calculated-trade';
 import { CrossChainTradeProvider } from 'src/features/cross-chain/providers/common/cross-chain-trade-provider';
-import { CrossChainMinAmountError } from 'src/common/errors/cross-chain/cross-chain-min-amount.error';
-import { CrossChainMaxAmountError } from 'src/common/errors/cross-chain/cross-chain-max-amount.error';
 import { FeeInfo } from 'src/features/cross-chain/providers/common/models/fee';
+import { CrossChainMinAmountError } from 'src/common/errors/cross-chain/cross-chain-min-amount-error';
+import { CrossChainMaxAmountError } from 'src/common/errors/cross-chain/cross-chain-max-amount-error';
 
 export abstract class CelerRubicCrossChainTradeProvider extends CrossChainTradeProvider {
     protected abstract contracts(blockchain: BlockchainName): CrossChainContractData;

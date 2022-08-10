@@ -1,7 +1,7 @@
 /**
  * Stores options for transaction in `swap` function.
  */
- export interface SwapTransactionOptions {
+export interface SwapTransactionOptions {
     /**
      * Callback to be called, when user confirm swap transaction.
      * @param hash Transaction hash.

@@ -1,9 +1,9 @@
-import { RubicSdkError } from '@common/errors/rubic-sdk.error';
-import { TimeoutError } from '@common/errors/utils/timeout.error';
-import pTimeout from '@common/utils/p-timeout';
-import { BLOCKCHAIN_NAME } from 'src/core/blockchain/models/blockchain-name';
-import { Web3Public } from '@core/blockchain/web3-public/web3-public';
-import { RpcProvider } from '@core/sdk/models/configuration';
+import { RubicSdkError } from 'src/common/errors/rubic-sdk.error';
+import { TimeoutError } from 'src/common/errors/utils/timeout.error';
+import pTimeout from 'src/common/utils/p-timeout';
+import { BlockchainName } from 'src/core/blockchain/models/blockchain-name';
+import { Web3Public } from 'src/core/blockchain/web3-public/web3-public';
+import { RpcProvider } from 'src/core/sdk/models/configuration';
 import Web3 from 'web3';
 
 export class Web3PublicService {
@@ -12,18 +12,18 @@ export class Web3PublicService {
     private static readonly healthCheckDefaultTimeout: 4_000;
 
     public static async createWeb3PublicService(
-        rpcList: Partial<Record<BLOCKCHAIN_NAME, RpcProvider>>
+        rpcList: Partial<Record<BlockchainName, RpcProvider>>
     ): Promise<Web3PublicService> {
         const web3PublicService = new Web3PublicService(rpcList);
         await web3PublicService.createAndCheckWeb3Public();
         return web3PublicService;
     }
 
-    private web3PublicStorage: Partial<Record<BLOCKCHAIN_NAME, Web3Public>> = {};
+    private web3PublicStorage: Partial<Record<BlockchainName, Web3Public>> = {};
 
-    constructor(private rpcList: Partial<Record<BLOCKCHAIN_NAME, RpcProvider>>) {}
+    constructor(private rpcList: Partial<Record<BlockchainName, RpcProvider>>) {}
 
-    public getWeb3Public(blockchainName: BLOCKCHAIN_NAME): Web3Public {
+    public getWeb3Public(blockchainName: BlockchainName): Web3Public {
         const web3Public = this.web3PublicStorage[blockchainName];
         if (!web3Public) {
             throw new RubicSdkError(
@@ -36,7 +36,7 @@ export class Web3PublicService {
 
     private async createAndCheckWeb3Public(): Promise<void> {
         const promises = Object.entries(this.rpcList).map(async ([blockchainName, rpcConfig]) => {
-            const web3Public = this.createWeb3Public(rpcConfig, blockchainName as BLOCKCHAIN_NAME);
+            const web3Public = this.createWeb3Public(rpcConfig, blockchainName as BlockchainName);
             if (!rpcConfig.spareRpc) {
                 return web3Public;
             }
@@ -50,21 +50,18 @@ export class Web3PublicService {
 
             return this.createWeb3Public(
                 { mainRpc: rpcConfig.spareRpc },
-                blockchainName as BLOCKCHAIN_NAME
+                blockchainName as BlockchainName
             );
         });
 
         const results = await Promise.all(promises);
         Object.keys(this.rpcList).forEach(
             (blockchainName, index) =>
-                (this.web3PublicStorage[blockchainName as BLOCKCHAIN_NAME] = results[index])
+                (this.web3PublicStorage[blockchainName as BlockchainName] = results[index])
         );
     }
 
-    private createWeb3Public(
-        rpcProvider: RpcProvider,
-        blockchainName: BLOCKCHAIN_NAME
-    ): Web3Public {
+    private createWeb3Public(rpcProvider: RpcProvider, blockchainName: BlockchainName): Web3Public {
         const web3Public = new Web3Public(new Web3(rpcProvider.mainRpc), blockchainName);
         let nodeReplaced = false;
 
@@ -81,7 +78,7 @@ export class Web3PublicService {
                             try {
                                 return await pTimeout(
                                     callMethod(),
-                                    rpcProvider.mainPrcTimeout ||
+                                    rpcProvider.mainRpcTimeout ||
                                         Web3PublicService.mainRpcDefaultTimeout
                                 );
                             } catch (e) {

@@ -2,29 +2,30 @@ import BigNumber from 'bignumber.js';
 import {
     FeeAmount,
     LiquidityPool
-} from '@features/instant-trades/dexes/common/uniswap-v3-abstract/utils/quoter-controller/models/liquidity-pool';
-import { compareAddresses } from '@common/utils/blockchain';
-import { Web3Public } from '@core/blockchain/web3-public/web3-public';
-import { MethodData } from '@core/blockchain/web3-public/models/method-data';
+} from 'src/features/instant-trades/dexes/common/uniswap-v3-abstract/utils/quoter-controller/models/liquidity-pool';
+import { compareAddresses } from 'src/common/utils/blockchain';
+import { Web3Public } from 'src/core/blockchain/web3-public/web3-public';
+import { MethodData } from 'src/core/blockchain/web3-public/models/method-data';
 import {
     FACTORY_CONTRACT_ABI,
     FACTORY_CONTRACT_ADDRESS
-} from '@features/instant-trades/dexes/common/uniswap-v3-abstract/utils/quoter-controller/constants/factory-contract-data';
-import { notNull } from '@common/utils/object';
-import { UniswapV3Route } from '@features/instant-trades/dexes/common/uniswap-v3-abstract/models/uniswap-v3-route';
-import { Token } from '@core/blockchain/tokens/token';
-import { Cache } from '@common/decorators/cache.decorator';
+} from 'src/features/instant-trades/dexes/common/uniswap-v3-abstract/utils/quoter-controller/constants/factory-contract-data';
+import { notNull } from 'src/common/utils/object';
+import { UniswapV3Route } from 'src/features/instant-trades/dexes/common/uniswap-v3-abstract/models/uniswap-v3-route';
+import { Token } from 'src/core/blockchain/tokens/token';
+import { Cache } from 'src/common/decorators/cache.decorator';
 import {
     QUOTER_CONTRACT_ABI,
     QUOTER_CONTRACT_ADDRESS
-} from '@features/instant-trades/dexes/common/uniswap-v3-abstract/utils/quoter-controller/constants/quoter-contract-data';
+} from 'src/features/instant-trades/dexes/common/uniswap-v3-abstract/utils/quoter-controller/constants/quoter-contract-data';
 
-import { Web3Pure } from '@core/blockchain/web3-pure/web3-pure';
-import { BLOCKCHAIN_NAME } from 'src/core/blockchain/models/blockchain-name';
-import { Injector } from '@core/sdk/injector';
-import { UniswapV3RouterConfiguration } from '@features/instant-trades/dexes/common/uniswap-v3-abstract/models/uniswap-v3-router-configuration';
-import { UniswapV3AlgebraQuoterController } from '@features/instant-trades/dexes/common/uniswap-v3-algebra-abstract/models/uniswap-v3-algebra-quoter-controller';
-import { Exact } from '@features/instant-trades/models/exact';
+import { Web3Pure } from 'src/core/blockchain/web3-pure/web3-pure';
+import { BlockchainName } from 'src/core/blockchain/models/blockchain-name';
+import { Injector } from 'src/core/sdk/injector';
+import { UniswapV3RouterConfiguration } from 'src/features/instant-trades/dexes/common/uniswap-v3-abstract/models/uniswap-v3-router-configuration';
+import { UniswapV3AlgebraQuoterController } from 'src/features/instant-trades/dexes/common/uniswap-v3-algebra-abstract/models/uniswap-v3-algebra-quoter-controller';
+import { Exact } from 'src/features/instant-trades/models/exact';
+import { RubicSdkError } from 'src/common';
 
 interface GetQuoterMethodsDataOptions {
     routesLiquidityPools: LiquidityPool[];
@@ -45,7 +46,7 @@ export class UniswapV3QuoterController implements UniswapV3AlgebraQuoterControll
      * toHex(fee_i) must be of length 6, so leading zeroes are added.
      * @param pools Liquidity pools, included in route.
      * @param initialTokenAddress From token address.
-     * @return string Encoded string.
+     * @returns string Encoded string.
      */
     @Cache
     public static getEncodedPoolsPath(pools: LiquidityPool[], initialTokenAddress: string): string {
@@ -81,7 +82,7 @@ export class UniswapV3QuoterController implements UniswapV3AlgebraQuoterControll
         poolsPath: LiquidityPool[];
         methodData: MethodData;
     } {
-        if (poolsPath.length === 1) {
+        if (poolsPath.length === 1 && poolsPath?.[0]) {
             const methodName =
                 exact === 'input' ? 'quoteExactInputSingle' : 'quoteExactOutputSingle';
             const sqrtPriceLimitX96 = 0;
@@ -126,7 +127,7 @@ export class UniswapV3QuoterController implements UniswapV3AlgebraQuoterControll
     }
 
     constructor(
-        private readonly blockchain: BLOCKCHAIN_NAME,
+        private readonly blockchain: BlockchainName,
         private readonly routerConfiguration: UniswapV3RouterConfiguration<string>
     ) {}
 
@@ -226,12 +227,16 @@ export class UniswapV3QuoterController implements UniswapV3AlgebraQuoterControll
 
         return poolsAddresses
             .map((poolAddress, index) => {
+                const poolMethodArguments = getPoolsMethodArguments?.[index];
+                if (!poolMethodArguments) {
+                    throw new RubicSdkError('Method arguments array for pool has to be defined');
+                }
                 if (!Web3Pure.isZeroAddress(poolAddress)) {
                     return new LiquidityPool(
                         poolAddress,
-                        getPoolsMethodArguments[index].tokenA,
-                        getPoolsMethodArguments[index].tokenB,
-                        getPoolsMethodArguments[index].fee
+                        poolMethodArguments.tokenA,
+                        poolMethodArguments.tokenB,
+                        poolMethodArguments.fee
                     );
                 }
                 return null;
@@ -277,10 +282,14 @@ export class UniswapV3QuoterController implements UniswapV3AlgebraQuoterControll
             .then(results => {
                 return results
                     .map((result, index) => {
+                        const pool = quoterMethodsData?.[index];
+                        if (!pool) {
+                            throw new RubicSdkError('Pool has to be defined');
+                        }
                         if (result.success) {
                             return {
                                 outputAbsoluteAmount: new BigNumber(result.output![0]),
-                                poolsPath: quoterMethodsData[index].poolsPath,
+                                poolsPath: pool.poolsPath,
                                 initialTokenAddress: from.address
                             };
                         }

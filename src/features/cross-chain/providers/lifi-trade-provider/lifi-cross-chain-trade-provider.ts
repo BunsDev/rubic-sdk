@@ -15,12 +15,12 @@ import { lifiContractAddress } from 'src/features/cross-chain/providers/lifi-tra
 import { PriceTokenAmount } from 'src/core/blockchain/tokens/price-token-amount';
 import { getLifiConfig } from 'src/features/cross-chain/providers/lifi-trade-provider/constants/lifi-config';
 import { CrossChainIsUnavailableError } from 'src/common';
-import { CrossChainMinAmountError } from 'src/common/errors/cross-chain/cross-chain-min-amount.error';
 import { FeeInfo } from 'src/features/cross-chain/providers/common/models/fee';
 import { nativeTokensList } from 'src/core/blockchain/constants/native-tokens';
 import { LifiStep } from '@lifi/types/dist/step';
 import { lifiProviders } from 'src/features/instant-trades/dexes/common/lifi/constants/lifi-providers';
 import { commonCrossChainAbi } from 'src/features/cross-chain/providers/common/constants/common-cross-chain-abi';
+import { CrossChainMinAmountError } from 'src/common/errors/cross-chain/cross-chain-min-amount-error';
 
 export class LifiCrossChainTradeProvider extends CrossChainTradeProvider {
     public static isSupportedBlockchain(

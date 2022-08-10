@@ -1,7 +1,7 @@
 /**
  * Http client, used to get and send http requests.
  */
- export interface HttpClient {
+export interface HttpClient {
     post<ResponseBody>(url: string, body: Object): Promise<ResponseBody>;
     get<ResponseBody>(
         url: string,

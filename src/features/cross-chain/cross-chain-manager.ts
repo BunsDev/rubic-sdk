@@ -1,78 +1,123 @@
-import { getCrossChainContract } from '@features/cross-chain/constants/cross-chain-contracts';
-import { CrossChainContractData } from '@features/cross-chain/cross-chain-contract-data/cross-chain-contract-data';
-import {
-    CrossChainSupportedBlockchain,
-    crossChainSupportedBlockchains
-} from '@features/cross-chain/constants/cross-chain-supported-blockchains';
-import { Token } from '@core/blockchain/tokens/token';
+import { Token } from 'src/core/blockchain/tokens/token';
+import { BlockchainName } from 'src/core/blockchain/models/blockchain-name';
+import { PriceTokenAmount } from 'src/core/blockchain/tokens/price-token-amount';
+import { notNull } from 'src/common/utils/object';
+import { PriceToken } from 'src/core/blockchain/tokens/price-token';
+import { RubicSdkError } from 'src/common/errors/rubic-sdk.error';
+import { combineOptions } from 'src/common/utils/options';
+import { getPriceTokensFromInputTokens } from 'src/common/utils/tokens';
+import { Mutable } from 'src/common/utils/types/mutable';
+import { CelerCrossChainTradeProvider } from 'src/features/cross-chain/providers/celer-trade-provider/celer-cross-chain-trade-provider';
+import { CcrTypedTradeProviders } from 'src/features/cross-chain/models/typed-trade-provider';
+import { CelerCrossChainTrade, CROSS_CHAIN_TRADE_TYPE, CrossChainTradeType } from 'src/features';
+import { SwapManagerCrossChainCalculationOptions } from 'src/features/cross-chain/models/swap-manager-cross-chain-options';
+import pTimeout from 'src/common/utils/p-timeout';
+import { CrossChainTradeProvider } from 'src/features/cross-chain/providers/common/cross-chain-trade-provider';
+import { WrappedCrossChainTrade } from 'src/features/cross-chain/providers/common/models/wrapped-cross-chain-trade';
 import BigNumber from 'bignumber.js';
-import { CrossChainOptions } from '@features/cross-chain/models/cross-chain-options';
-import { BLOCKCHAIN_NAME } from 'src/core/blockchain/models/blockchain-name';
-import { compareAddresses } from '@common/utils/blockchain';
-import { PriceTokenAmount } from '@core/blockchain/tokens/price-token-amount';
-import { Web3Pure } from '@core/blockchain/web3-pure/web3-pure';
-import { CrossChainContractTrade } from '@features/cross-chain/cross-chain-contract-trade/cross-chain-contract-trade';
-import { DirectCrossChainContractTrade } from '@features/cross-chain/cross-chain-contract-trade/direct-cross-chain-contract-trade';
-import { ItCrossChainContractTrade } from '@features/cross-chain/cross-chain-contract-trade/it-cross-chain-contract-trade/it-cross-chain-contract-trade';
-import { CrossChainTrade } from '@features/cross-chain/cross-chain-trade/cross-chain-trade';
-import { MinMaxAmountsErrors } from '@features/cross-chain/cross-chain-trade/models/min-max-amounts-errors';
-import { InsufficientLiquidityError } from '@common/errors/swap/insufficient-liquidity.error';
-import { MinMaxAmounts } from '@features/cross-chain/models/min-max-amounts';
-import { GasData } from '@features/cross-chain/models/gas-data';
-import { NotSupportedBlockchain } from '@common/errors/swap/not-supported-blockchain';
-import { notNull } from '@common/utils/object';
-import { PriceToken } from '@core/blockchain/tokens/price-token';
-import { RubicSdkError } from '@common/errors/rubic-sdk.error';
-import { combineOptions } from '@common/utils/options';
-import { getPriceTokensFromInputTokens } from '@common/utils/tokens';
-import {
-    CrossChainSupportedInstantTrade,
-    CrossChainSupportedInstantTradeProvider
-} from '@features/cross-chain/models/cross-chain-supported-instant-trade';
-import { CrossChainMaxAmountError } from '@common/errors/cross-chain/cross-chain-max-amount-error';
-import { CrossChainMinAmountError } from '@common/errors/cross-chain/cross-chain-min-amount-error';
+import { MarkRequired } from 'ts-essentials';
+import { RequiredCrossChainOptions } from 'src/features/cross-chain/models/cross-chain-options';
+import { from as fromPromise, map, merge, mergeMap, Observable, of, switchMap } from 'rxjs';
+import { CrossChainProviderData } from 'src/features/cross-chain/providers/common/models/cross-chain-provider-data';
+import { SymbiosisCrossChainTradeProvider } from 'src/features/cross-chain/providers/symbiosis-trade-provider/symbiosis-cross-chain-trade-provider';
+import { LifiCrossChainTrade } from 'src/features/cross-chain/providers/lifi-trade-provider/lifi-cross-chain-trade';
+import { WrappedTradeOrNull } from 'src/features/cross-chain/providers/common/models/wrapped-trade-or-null';
+import { DebridgeCrossChainTradeProvider } from 'src/features/cross-chain/providers/debridge-trade-provider/debridge-cross-chain-trade-provider';
+import { CrossChainMinAmountError } from 'src/common/errors/cross-chain/cross-chain-min-amount-error';
+import { CrossChainMaxAmountError } from 'src/common/errors/cross-chain/cross-chain-max-amount-error';
+import { Injector } from 'src/core/sdk/injector';
+import { LifiCrossChainTradeProvider } from './providers/lifi-trade-provider/lifi-cross-chain-trade-provider';
+import { RubicCrossChainTradeProvider } from './providers/rubic-trade-provider/rubic-cross-chain-trade-provider';
 
-interface ItCalculatedTrade {
-    toAmount: BigNumber;
-    providerIndex: number;
-    instantTrade: CrossChainSupportedInstantTrade;
-}
+type RequiredSwapManagerCalculationOptions = MarkRequired<
+    SwapManagerCrossChainCalculationOptions,
+    'timeout' | 'disabledProviders'
+> &
+    RequiredCrossChainOptions;
 
+/**
+ * Contains method to calculate best cross chain trade.
+ */
 export class CrossChainManager {
-    public static isSupportedBlockchain(
-        blockchain: BLOCKCHAIN_NAME
-    ): blockchain is CrossChainSupportedBlockchain {
-        return crossChainSupportedBlockchains.some(
-            supportedBlockchain => supportedBlockchain === blockchain
-        );
+    private static readonly defaultCalculationTimeout = 20_000;
+
+    private static readonly defaultSlippageTolerance = 0.02;
+
+    private static readonly defaultDeadline = 20;
+
+    public readonly tradeProviders: CcrTypedTradeProviders = [
+        RubicCrossChainTradeProvider,
+        CelerCrossChainTradeProvider,
+        SymbiosisCrossChainTradeProvider,
+        LifiCrossChainTradeProvider,
+        DebridgeCrossChainTradeProvider
+    ].reduce((acc, ProviderClass) => {
+        const provider = new ProviderClass();
+        acc[provider.type] = provider;
+        return acc;
+    }, {} as Mutable<CcrTypedTradeProviders>);
+
+    constructor(private readonly providerAddress: string) {}
+
+    protected get walletAddress(): string {
+        return Injector.web3Private.address;
     }
 
-    private readonly contracts: (
-        blockchain: CrossChainSupportedBlockchain
-    ) => CrossChainContractData;
-
-    private readonly defaultSlippageTolerance = 0.02;
-
-    constructor(private readonly providerAddress: string) {
-        this.contracts = getCrossChainContract;
-    }
-
+    /**
+     * Calculates cross chain trades and sorts them by exchange courses.
+     * Wrapped trade object may contain error, but sometimes course can be
+     * calculated even with thrown error (e.g. min/max amount error).
+     *
+     * @example
+     * ```ts
+     * const fromBlockchain = BLOCKCHAIN_NAME.ETHEREUM;
+     * // ETH
+     * const fromTokenAddress = '0x0000000000000000000000000000000000000000';
+     * const fromAmount = 1;
+     * const toBlockchain = BLOCKCHAIN_NAME.BINANCE_SMART_CHAIN;
+     * // BUSD
+     * const toTokenAddress = '0xe9e7cea3dedca5984780bafc599bd69add087d56';
+     *
+     * const wrappedTrades = await sdk.crossChain.calculateTrade(
+     *     { blockchain: fromBlockchain, address: fromTokenAddress },
+     *     fromAmount,
+     *     { blockchain: toBlockchain, address: toTokenAddress }
+     * );
+     * const bestTrade = wrappedTrades[0];
+     *
+     * wrappedTrades.forEach(wrappedTrade => {
+     *    if (wrappedTrade.trade) {
+     *        console.log(wrappedTrade.tradeType, `to amount: ${wrappedTrade.trade.to.tokenAmount.toFormat(3)}`));
+     *    }
+     *    if (wrappedTrade.error) {
+     *        console.error(wrappedTrade.tradeType, 'error: wrappedTrade.error');
+     *    }
+     * });
+     *
+     * ```
+     *
+     * @param fromToken Token to sell.
+     * @param fromAmount Amount to sell.
+     * @param toToken Token to get.
+     * @param options Additional options.
+     * @returns Array of sorted wrapped cross chain trades with possible errors.
+     */
     public async calculateTrade(
         fromToken:
             | Token
             | {
                   address: string;
-                  blockchain: BLOCKCHAIN_NAME;
+                  blockchain: BlockchainName;
               },
         fromAmount: string | number,
         toToken:
             | Token
             | {
                   address: string;
-                  blockchain: BLOCKCHAIN_NAME;
+                  blockchain: BlockchainName;
               },
-        options?: CrossChainOptions
-    ): Promise<CrossChainTrade> {
+        options?: Omit<SwapManagerCrossChainCalculationOptions, 'providerAddress'>
+    ): Promise<WrappedCrossChainTrade[]> {
         if (toToken instanceof Token && fromToken.blockchain === toToken.blockchain) {
             throw new RubicSdkError('Blockchains of from and to tokens must be different.');
         }
@@ -83,389 +128,308 @@ export class CrossChainManager {
             toToken
         );
 
-        return this.calculateTradeFromTokens(from, to, this.getFullOptions(options));
+        return this.calculateBestTradeFromTokens(from, to, this.getFullOptions(options));
     }
 
-    private getFullOptions(options?: CrossChainOptions): Required<CrossChainOptions> {
-        return combineOptions(options, {
-            fromSlippageTolerance: this.defaultSlippageTolerance,
-            toSlippageTolerance: this.defaultSlippageTolerance
-        });
-    }
-
-    private async calculateTradeFromTokens(
-        from: PriceTokenAmount,
-        toToken: PriceToken,
-        options: CrossChainOptions
-    ): Promise<CrossChainTrade> {
-        const fromBlockchain = from.blockchain;
-        const toBlockchain = toToken.blockchain;
-        if (
-            !CrossChainManager.isSupportedBlockchain(fromBlockchain) ||
-            !CrossChainManager.isSupportedBlockchain(toBlockchain)
-        ) {
-            throw new NotSupportedBlockchain();
-        }
-
-        const [fromTransitToken, toTransitToken] = await Promise.all([
-            new PriceToken({
-                ...(await this.contracts(fromBlockchain).getTransitToken()),
-                price: new BigNumber(NaN)
-            }),
-            new PriceToken({
-                ...(await this.contracts(toBlockchain).getTransitToken()),
-                price: new BigNumber(NaN)
-            })
-        ]);
-
-        const { fromSlippageTolerance, toSlippageTolerance } = options;
-
-        const fromTrade = await this.calculateBestTrade(
-            fromBlockchain,
-            from,
-            fromTransitToken,
-            fromSlippageTolerance
-        );
-        await this.checkMinMaxAmountsErrors(fromTrade);
-
-        const { toTransitTokenAmount, transitFeeToken } = await this.getToTransitTokenAmount(
-            fromTrade,
-            toBlockchain
-        );
-
-        const toTrade = await this.calculateBestTrade(
-            toBlockchain,
-            new PriceTokenAmount({ ...toTransitToken.asStruct, tokenAmount: toTransitTokenAmount }),
-            toToken,
-            toSlippageTolerance
-        );
-
-        const { cryptoFeeToken, gasData } = await this.getCryptoFeeTokenAndGasData(
-            fromTrade,
-            toTrade
-        );
-
-        return new CrossChainTrade(
-            {
-                fromTrade,
-                toTrade,
-                cryptoFeeToken,
-                transitFeeToken,
-                gasData
-            },
-            this.providerAddress
-        );
-    }
-
-    private async calculateBestTrade(
-        blockchain: CrossChainSupportedBlockchain,
-        from: PriceTokenAmount,
-        toToken: PriceToken,
-        slippageTolerance: number
-    ): Promise<CrossChainContractTrade> {
-        if (compareAddresses(from.address, toToken.address)) {
-            const contract = this.contracts(blockchain);
-            if (!from.price.isFinite()) {
-                from = new PriceTokenAmount({ ...from.asStructWithAmount, price: toToken.price });
-            }
-
-            return new DirectCrossChainContractTrade(blockchain, contract, from);
-        }
-
-        return this.getBestItContractTrade(blockchain, from, toToken, slippageTolerance);
-    }
-
-    private async getBestItContractTrade(
-        blockchain: CrossChainSupportedBlockchain,
-        from: PriceTokenAmount,
-        toToken: PriceToken,
-        slippageTolerance: number
-    ): Promise<ItCrossChainContractTrade> {
-        const contract = this.contracts(blockchain);
-
-        const promises: Promise<ItCalculatedTrade>[] = contract.providersData.map(
-            async (_, providerIndex) => {
-                return this.getItCalculatedTrade(
-                    contract,
-                    providerIndex,
-                    from,
-                    toToken,
-                    slippageTolerance
-                );
-            }
-        );
-
-        const bestTrade = await Promise.allSettled(promises).then(async results => {
-            const sortedResults = results
-                .map(result => {
-                    if (result.status === 'fulfilled') {
-                        return result.value;
-                    }
-                    return null;
-                })
-                .filter(notNull)
-                .sort((a, b) => b.toAmount.comparedTo(a.toAmount));
-
-            if (!sortedResults.length) {
-                throw (results[0] as PromiseRejectedResult).reason;
-            }
-            return sortedResults[0];
-        });
-
-        return new ItCrossChainContractTrade(
-            blockchain,
-            contract,
-            bestTrade.providerIndex,
-            slippageTolerance,
-            bestTrade.instantTrade
-        );
-    }
-
-    private async getItCalculatedTrade(
-        contract: CrossChainContractData,
-        providerIndex: number,
-        from: PriceTokenAmount,
-        toToken: PriceToken,
-        slippageTolerance: number
-    ): Promise<ItCalculatedTrade> {
-        const instantTrade = await contract.getProvider(providerIndex).calculate(from, toToken, {
-            gasCalculation: 'disabled',
-            slippageTolerance
-        });
-        return {
-            toAmount: instantTrade.to.tokenAmount,
-            providerIndex,
-            instantTrade
-        };
-    }
-
-    private async getToTransitTokenAmount(
-        fromTrade: CrossChainContractTrade,
-        toBlockchain: CrossChainSupportedBlockchain
-    ): Promise<{
-        toTransitTokenAmount: BigNumber;
-        transitFeeToken: PriceTokenAmount;
-    }> {
-        const fromTransitToken = fromTrade.toToken;
-        const fromTransitTokenMinAmount = fromTrade.toTokenAmountMin;
-
-        const feeInPercents = await this.contracts(toBlockchain).getFeeInPercents(
-            fromTrade.contract
-        );
-        const transitFeeToken = new PriceTokenAmount({
-            ...fromTransitToken.asStruct,
-            tokenAmount: fromTransitTokenMinAmount.multipliedBy(feeInPercents).dividedBy(100)
-        });
-
-        const toTransitTokenAmount = fromTransitTokenMinAmount.minus(transitFeeToken.tokenAmount);
-
-        return {
-            toTransitTokenAmount,
-            transitFeeToken
-        };
-    }
-
-    private async checkMinMaxAmountsErrors(
-        fromTrade: CrossChainContractTrade
-    ): Promise<MinMaxAmountsErrors> {
-        const slippageTolerance =
-            fromTrade instanceof ItCrossChainContractTrade
-                ? fromTrade.slippageTolerance
-                : undefined;
-        const { minAmount: minTransitTokenAmount, maxAmount: maxTransitTokenAmount } =
-            await this.getMinMaxTransitTokenAmounts(fromTrade.blockchain, slippageTolerance);
-        const fromTransitTokenAmount = fromTrade.toToken.tokenAmount;
-
-        if (fromTransitTokenAmount.lt(minTransitTokenAmount)) {
-            const minAmount = await this.getTokenAmountForExactTransitTokenAmount(
-                fromTrade,
-                minTransitTokenAmount
-            );
-            if (!minAmount?.isFinite()) {
-                throw new InsufficientLiquidityError();
-            }
-            throw new CrossChainMinAmountError(minAmount, fromTrade.fromToken.symbol);
-        }
-
-        if (fromTransitTokenAmount.gt(maxTransitTokenAmount)) {
-            const maxAmount = await this.getTokenAmountForExactTransitTokenAmount(
-                fromTrade,
-                maxTransitTokenAmount
-            );
-            throw new CrossChainMaxAmountError(maxAmount, fromTrade.fromToken.symbol);
-        }
-
-        return {};
-    }
-
-    public async getMinMaxAmounts(
+    /**
+     * Calculates cross chain trades reactively in sequence.
+     * Contains wrapped trade object which may contain error, but sometimes course can be
+     * calculated even with thrown error (e.g. min/max amount error).
+     *
+     * @example
+     * ```ts
+     * const fromBlockchain = BLOCKCHAIN_NAME.ETHEREUM;
+     * // ETH
+     * const fromTokenAddress = '0x0000000000000000000000000000000000000000';
+     * const fromAmount = 1;
+     * const toBlockchain = BLOCKCHAIN_NAME.BINANCE_SMART_CHAIN;
+     * // BUSD
+     * const toTokenAddress = '0xe9e7cea3dedca5984780bafc599bd69add087d56';
+     *
+     * sdk.crossChain.calculateTrade(
+     *     { blockchain: fromBlockchain, address: fromTokenAddress },
+     *     fromAmount,
+     *     { blockchain: toBlockchain, address: toTokenAddress }
+     * ).subscribe(tradeData => {
+     *     console.log(tradeData.totalProviders) // 3
+     *     console.log(tradeData.calculatedProviders) // 0 -> 1 -> ... -> totalProviders
+     *      if (tradeData.bestTrade.trade) {
+     *        console.log(wrappedTrade.tradeType, `to amount: ${wrappedTrade.trade.to.tokenAmount.toFormat(3)}`));
+     *    }
+     *    if (tradeData.bestTrade.error) {
+     *        console.error(wrappedTrade.tradeType, 'error: wrappedTrade.error');
+     *    }
+     * });
+     *
+     * ```
+     *
+     * @param fromToken Token to sell.
+     * @param fromAmount Amount to sell.
+     * @param toToken Token to get.
+     * @param options Additional options.
+     * @returns Observable of cross chain providers calculation data with best trade and possible errors.
+     */
+    public calculateTradesReactively(
         fromToken:
             | Token
             | {
                   address: string;
-                  blockchain: BLOCKCHAIN_NAME;
+                  blockchain: BlockchainName;
               },
-        slippageTolerance?: number
-    ): Promise<MinMaxAmounts> {
-        const from = fromToken instanceof Token ? fromToken : await Token.createToken(fromToken);
-        return this.getMinMaxAmountsDifficult(
-            from,
-            slippageTolerance || this.defaultSlippageTolerance
-        );
-    }
-
-    private async getMinMaxAmountsDifficult(
-        fromToken: Token,
-        slippageTolerance: number
-    ): Promise<MinMaxAmounts> {
-        const fromBlockchain = fromToken.blockchain;
-        if (!CrossChainManager.isSupportedBlockchain(fromBlockchain)) {
-            throw new NotSupportedBlockchain();
+        fromAmount: string | number,
+        toToken:
+            | Token
+            | {
+                  address: string;
+                  blockchain: BlockchainName;
+              },
+        options?: Omit<SwapManagerCrossChainCalculationOptions, 'providerAddress'>
+    ): Observable<CrossChainProviderData> {
+        if (toToken instanceof Token && fromToken.blockchain === toToken.blockchain) {
+            throw new RubicSdkError('Blockchains of from and to tokens must be different.');
         }
+        return fromPromise(
+            getPriceTokensFromInputTokens(fromToken, fromAmount.toString(), toToken)
+        ).pipe(
+            switchMap(tokens => {
+                const { from, to } = tokens;
+                const { disabledProviders, timeout, ...providersOptions } =
+                    this.getFullOptions(options);
 
-        const transitToken = await this.contracts(fromBlockchain).getTransitToken();
-        if (compareAddresses(fromToken.address, transitToken.address)) {
-            return this.getMinMaxTransitTokenAmounts(fromBlockchain);
-        }
+                const providers = Object.entries(this.tradeProviders).filter(([type, provider]) => {
+                    if (disabledProviders.includes(type as CrossChainTradeType)) {
+                        return false;
+                    }
 
-        const { minAmount: minTransitTokenAmount, maxAmount: maxTransitTokenAmount } =
-            await this.getMinMaxTransitTokenAmounts(fromBlockchain, slippageTolerance);
-        const minAmount = await this.getMinOrMaxAmount(
-            fromBlockchain,
-            fromToken,
-            transitToken,
-            minTransitTokenAmount,
-            'min'
-        );
-        const maxAmount = await this.getMinOrMaxAmount(
-            fromBlockchain,
-            fromToken,
-            transitToken,
-            maxTransitTokenAmount,
-            'max'
-        );
+                    return provider.isSupportedBlockchains(from.blockchain, to.blockchain);
+                }) as [CrossChainTradeType, CrossChainTradeProvider][];
 
-        return { minAmount, maxAmount };
-    }
+                const providerData: CrossChainProviderData = {
+                    bestProvider: null,
+                    totalProviders: providers.length,
+                    calculatedProviders: -1,
+                    allProviders: []
+                };
 
-    private async getMinOrMaxAmount(
-        fromBlockchain: CrossChainSupportedBlockchain,
-        fromToken: Token,
-        transitToken: Token,
-        transitTokenAmount: BigNumber,
-        type: 'min' | 'max'
-    ): Promise<BigNumber> {
-        const fromContract = this.contracts(fromBlockchain);
-        const promises = fromContract.providersData.map(providerData => {
-            return this.getTokenAmountForExactTransitTokenAmountByProvider(
-                fromToken,
-                transitToken,
-                transitTokenAmount,
-                providerData.provider
-            );
-        });
-
-        const sortedAmounts = (await Promise.allSettled(promises))
-            .map(result => {
-                if (result.status === 'fulfilled') {
-                    return result.value;
+                if (!providers.length) {
+                    throw new RubicSdkError(`There are no providers for trade`);
                 }
-                return null;
+
+                const tradeObservable$ = merge(
+                    of(
+                        pTimeout(
+                            new Promise<WrappedTradeOrNull>(resolve => resolve(null)),
+                            Infinity
+                        )
+                    ),
+                    fromPromise(
+                        providers.map(async ([type, provider]) => {
+                            const promise = provider.calculate(from, to, providersOptions);
+                            try {
+                                const wrappedTrade = await pTimeout(promise, timeout);
+
+                                if (!wrappedTrade) {
+                                    return null;
+                                }
+
+                                return {
+                                    ...wrappedTrade,
+                                    tradeType: type
+                                };
+                            } catch (err) {
+                                return {
+                                    trade: null,
+                                    tradeType: type,
+                                    error: err
+                                };
+                            }
+                        })
+                    )
+                );
+
+                return tradeObservable$.pipe(
+                    mergeMap(el => el),
+                    map(wrappedTrade => {
+                        providerData.calculatedProviders += 1;
+                        providerData.bestProvider = this.chooseBestProvider(
+                            wrappedTrade,
+                            providerData.bestProvider
+                        );
+                        providerData.allProviders = wrappedTrade
+                            ? [...providerData.allProviders, wrappedTrade]
+                            : providerData.allProviders;
+
+                        return providerData;
+                    })
+                );
             })
-            .filter(notNull)
-            .sort((a, b) => a.comparedTo(b));
-
-        if (type === 'min') {
-            return sortedAmounts[0];
-        }
-        return sortedAmounts[sortedAmounts.length - 1];
+        );
     }
 
-    private async getMinMaxTransitTokenAmounts(
-        fromBlockchain: CrossChainSupportedBlockchain,
-        slippageTolerance?: number
-    ): Promise<MinMaxAmounts> {
-        const fromContract = this.contracts(fromBlockchain);
-        const fromTransitToken = await fromContract.getTransitToken();
-
-        const getAmount = async (type: 'min' | 'max'): Promise<BigNumber> => {
-            const fromTransitTokenAmountAbsolute = await fromContract.getMinOrMaxTransitTokenAmount(
-                type
-            );
-            const fromTransitTokenAmount = Web3Pure.fromWei(
-                fromTransitTokenAmountAbsolute,
-                fromTransitToken.decimals
-            );
-
-            if (type === 'min') {
-                if (slippageTolerance) {
-                    return fromTransitTokenAmount.dividedBy(1 - slippageTolerance);
-                }
-                return fromTransitTokenAmount;
-            }
-            return fromTransitTokenAmount;
-        };
-
-        return Promise.all([getAmount('min'), getAmount('max')]).then(([minAmount, maxAmount]) => ({
-            minAmount,
-            maxAmount
-        }));
-    }
-
-    private async getTokenAmountForExactTransitTokenAmount(
-        fromTrade: CrossChainContractTrade,
-        transitTokenAmount: BigNumber
-    ): Promise<BigNumber> {
-        const transitToken = await fromTrade.contract.getTransitToken();
+    /**
+     * Choose the best provider between two trades.
+     * @param newTrade New trade to compare.
+     * @param oldTrade Old trade to compare.
+     */
+    private chooseBestProvider(
+        newTrade: WrappedTradeOrNull,
+        oldTrade: WrappedTradeOrNull
+    ): WrappedTradeOrNull {
         if (
-            compareAddresses(fromTrade.fromToken.address, transitToken.address) ||
-            transitTokenAmount.eq(0)
+            oldTrade?.error instanceof CrossChainMinAmountError &&
+            newTrade?.error instanceof CrossChainMinAmountError
         ) {
-            return transitTokenAmount;
+            return oldTrade.error.minAmount.lte(newTrade.error.minAmount) ? oldTrade : newTrade;
+        }
+        if (
+            oldTrade?.error instanceof CrossChainMaxAmountError &&
+            newTrade?.error instanceof CrossChainMaxAmountError
+        ) {
+            return oldTrade.error.maxAmount.gte(newTrade.error.maxAmount) ? oldTrade : newTrade;
         }
 
-        return this.getTokenAmountForExactTransitTokenAmountByProvider(
-            fromTrade.fromToken,
-            transitToken,
-            transitTokenAmount,
-            fromTrade.provider
-        );
+        if (!oldTrade || oldTrade.error) {
+            return newTrade;
+        }
+
+        if (!newTrade || newTrade.error) {
+            return oldTrade;
+        }
+
+        const oldTradeRatio = oldTrade?.trade?.getTradeAmountRatio();
+        const newTradeRatio = newTrade?.trade?.getTradeAmountRatio();
+
+        if (!newTradeRatio) {
+            return oldTrade;
+        }
+
+        if (!oldTradeRatio) {
+            return newTrade;
+        }
+
+        return oldTradeRatio.lte(newTradeRatio) ? oldTrade : newTrade;
     }
 
-    private getTokenAmountForExactTransitTokenAmountByProvider(
-        fromToken: Token,
-        transitToken: Token,
-        transitTokenAmount: BigNumber,
-        provider: CrossChainSupportedInstantTradeProvider
-    ) {
-        return provider.calculateExactOutputAmount(
-            new PriceToken({
-                ...fromToken,
-                price: new BigNumber(NaN)
-            }),
-            new PriceTokenAmount({
-                ...transitToken,
-                tokenAmount: transitTokenAmount,
-                price: new BigNumber(NaN)
-            }),
-            {
-                gasCalculation: 'disabled'
+    private getFullOptions(
+        options?: SwapManagerCrossChainCalculationOptions
+    ): RequiredSwapManagerCalculationOptions {
+        return combineOptions<RequiredSwapManagerCalculationOptions>(options, {
+            fromSlippageTolerance: CrossChainManager.defaultSlippageTolerance,
+            toSlippageTolerance: CrossChainManager.defaultSlippageTolerance,
+            gasCalculation: 'disabled',
+            disabledProviders: [],
+            timeout: CrossChainManager.defaultCalculationTimeout,
+            providerAddress: this.providerAddress,
+            slippageTolerance: CrossChainManager.defaultSlippageTolerance * 2,
+            deadline: CrossChainManager.defaultDeadline,
+            fromAddress: this.walletAddress
+        });
+    }
+
+    private async calculateBestTradeFromTokens(
+        from: PriceTokenAmount,
+        to: PriceToken,
+        options: RequiredSwapManagerCalculationOptions
+    ): Promise<WrappedCrossChainTrade[]> {
+        const wrappedTrades = await this.calculateTradeFromTokens(
+            from,
+            to,
+            this.getFullOptions(options)
+        );
+
+        const fromTokenPrice =
+            (
+                wrappedTrades.find(
+                    wrappedTrade => wrappedTrade.trade instanceof LifiCrossChainTrade
+                )?.trade as LifiCrossChainTrade
+            )?.from.price ||
+            (
+                wrappedTrades.find(
+                    wrappedTrade => wrappedTrade.trade instanceof CelerCrossChainTrade
+                )?.trade as CelerCrossChainTrade
+            )?.fromTrade.toToken.tokenAmount;
+
+        if (!fromTokenPrice) {
+            return wrappedTrades.sort(tradeA => (tradeA?.trade ? -1 : 1));
+        }
+        return wrappedTrades.sort((firstTrade, secondTrade) => {
+            const firstTradeRatio = this.getProviderRatio(firstTrade, fromTokenPrice);
+            const secondTradeRatio = this.getProviderRatio(secondTrade, fromTokenPrice);
+
+            return firstTradeRatio.comparedTo(secondTradeRatio);
+        });
+    }
+
+    private getProviderRatio(wrappedTrade: WrappedCrossChainTrade, fromTokenPrice: BigNumber) {
+        const { trade } = wrappedTrade;
+
+        if (!trade || !fromTokenPrice || wrappedTrade.error) {
+            return new BigNumber(Infinity);
+        }
+
+        if (trade instanceof CelerCrossChainTrade) {
+            return fromTokenPrice
+                .plus(trade.cryptoFeeToken.price.multipliedBy(trade.cryptoFeeToken.tokenAmount))
+                .dividedBy(trade.to.tokenAmount);
+        }
+
+        return fromTokenPrice.dividedBy(trade.to.tokenAmount);
+    }
+
+    private async calculateTradeFromTokens(
+        from: PriceTokenAmount,
+        to: PriceToken,
+        options: RequiredSwapManagerCalculationOptions
+    ): Promise<WrappedCrossChainTrade[]> {
+        const { disabledProviders, timeout, ...providersOptions } = options;
+        const providers = Object.entries(this.tradeProviders).filter(([type]) => {
+            if (disabledProviders.includes(type as CrossChainTradeType)) {
+                return false;
             }
-        );
-    }
 
-    private async getCryptoFeeTokenAndGasData(
-        fromTrade: CrossChainContractTrade,
-        toTrade: CrossChainContractTrade
-    ): Promise<{
-        cryptoFeeToken: PriceTokenAmount;
-        gasData: GasData | null;
-    }> {
-        const cryptoFeeToken = await fromTrade.contract.getCryptoFeeToken(toTrade.contract);
-        const gasData = await CrossChainTrade.getGasData(fromTrade, toTrade, cryptoFeeToken);
-        return {
-            cryptoFeeToken,
-            gasData
-        };
+            if (
+                type === CROSS_CHAIN_TRADE_TYPE.RUBIC &&
+                CelerCrossChainTradeProvider.isSupportedBlockchain(from.blockchain) &&
+                CelerCrossChainTradeProvider.isSupportedBlockchain(to.blockchain)
+            ) {
+                return false;
+            }
+
+            return true;
+        }) as [CrossChainTradeType, CrossChainTradeProvider][];
+
+        if (!providers.length) {
+            throw new RubicSdkError(`There are no providers for trade`);
+        }
+
+        const calculationPromises = providers.map(async ([type, provider]) => {
+            try {
+                const calculation = provider.calculate(from, to, providersOptions);
+                const wrappedTrade = await pTimeout(calculation, timeout);
+                if (!wrappedTrade) {
+                    return null;
+                }
+
+                return {
+                    ...wrappedTrade,
+                    tradeType: provider.type
+                };
+            } catch (err: unknown) {
+                console.debug(
+                    `[RUBIC_SDK] Trade calculation error occurred for ${type} trade provider.`,
+                    err
+                );
+                return {
+                    trade: null,
+                    tradeType: provider.type,
+                    error: CrossChainTradeProvider.parseError(err)
+                };
+            }
+        });
+        const results = (await Promise.all(calculationPromises)).filter(notNull);
+        if (!results?.length) {
+            throw new RubicSdkError('No success providers calculation for the trade');
+        }
+        return results;
     }
 }

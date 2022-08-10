@@ -1,3 +1,4 @@
+/* eslint-disable func-names */
 import { TimeoutError } from '@common/errors/utils/timeout.error';
 import pTimeout from '@common/utils/p-timeout';
 import CancelablePromise from 'cancelable-promise';

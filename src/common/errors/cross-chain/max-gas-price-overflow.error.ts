@@ -1,3 +1,12 @@
-import { RubicSdkError } from '@common/errors/rubic-sdk.error';
+import { RubicSdkError } from 'src/common/errors/rubic-sdk.error';
 
-export class MaxGasPriceOverflowError extends RubicSdkError {}
+/**
+ * Thrown, when current gas price is higher, than max gas price on cross chain contract
+ * in target network.
+ */
+export class MaxGasPriceOverflowError extends RubicSdkError {
+    constructor() {
+        super();
+        Object.setPrototypeOf(this, MaxGasPriceOverflowError.prototype);
+    }
+}

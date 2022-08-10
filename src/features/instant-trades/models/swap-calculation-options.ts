@@ -19,7 +19,7 @@ export interface SwapCalculationOptions extends SwapOptions {
     /**
      * User wallet address, from which transaction will be sent.
      */
-    readonly fromAddress?: string;
+    readonly fromAddress?: string | '';
 
     /**
      * @internal

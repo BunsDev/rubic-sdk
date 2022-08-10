@@ -41,7 +41,7 @@ export const TRADE_TYPE = {
     UBE_SWAP: 'UBE_SWAP',
     BEAM_SWAP: 'BEAM_SWAP',
     J_SWAP: 'J_SWAP',
-    CRONA_SWAP: 'CRONA_SWAP',
+    CRONA_SWAP: 'CRONA_SWAP'
 } as const;
 
 export type TradeType = keyof typeof TRADE_TYPE;

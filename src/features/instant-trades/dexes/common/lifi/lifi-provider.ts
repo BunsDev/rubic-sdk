@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { GasFeeInfo, TradeType } from 'src/features';
 import { InstantTrade } from 'src/features/instant-trades/instant-trade';
 import { BlockchainsInfo, PriceToken, Web3Pure } from 'src/core';

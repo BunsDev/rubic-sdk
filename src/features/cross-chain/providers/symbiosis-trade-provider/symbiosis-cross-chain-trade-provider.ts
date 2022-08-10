@@ -26,12 +26,12 @@ import { OneinchBscProvider } from 'src/features/instant-trades/dexes/bsc/oneinc
 import { OneinchPolygonProvider } from 'src/features/instant-trades/dexes/polygon/oneinch-polygon/oneinch-polygon-provider';
 import { OneinchAvalancheProvider } from 'src/features/instant-trades/dexes/avalanche/oneinch-avalanche/oneinch-avalanche-provider';
 import { getSymbiosisConfig } from 'src/features/cross-chain/providers/symbiosis-trade-provider/constants/symbiosis-config';
-import { CrossChainMinAmountError } from 'src/common/errors/cross-chain/cross-chain-min-amount.error';
-import { CrossChainMaxAmountError } from 'src/common/errors/cross-chain/cross-chain-max-amount.error';
 import { WrappedCrossChainTrade } from 'src/features/cross-chain/providers/common/models/wrapped-cross-chain-trade';
 import { FeeInfo } from 'src/features/cross-chain/providers/common/models/fee';
 import { nativeTokensList } from 'src/core/blockchain/constants/native-tokens';
 import { commonCrossChainAbi } from 'src/features/cross-chain/providers/common/constants/common-cross-chain-abi';
+import { CrossChainMinAmountError } from 'src/common/errors/cross-chain/cross-chain-min-amount-error';
+import { CrossChainMaxAmountError } from 'src/common/errors/cross-chain/cross-chain-max-amount-error';
 
 export class SymbiosisCrossChainTradeProvider extends CrossChainTradeProvider {
     public static isSupportedBlockchain(

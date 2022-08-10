@@ -1,19 +1,26 @@
-import { RubicSdkError } from '@common/errors/rubic-sdk.error';
-import { BLOCKCHAIN_NAME } from 'src/core/blockchain/models/blockchain-name';
-import { TokenBaseStruct } from '@core/blockchain/models/token-base-struct';
-import { Web3Pure } from '@core/blockchain/web3-pure/web3-pure';
-import { Injector } from '@core/sdk/injector';
-import { compareAddresses } from '@common/utils/blockchain';
+import { RubicSdkError } from 'src/common/errors/rubic-sdk.error';
+import { BlockchainName } from 'src/core/blockchain/models/blockchain-name';
+import { TokenBaseStruct } from 'src/core/blockchain/models/token-base-struct';
+import { Web3Pure } from 'src/core/blockchain/web3-pure/web3-pure';
+import { Injector } from 'src/core/sdk/injector';
+import { compareAddresses } from 'src/common/utils/blockchain';
 
 export type TokenStruct = {
-    blockchain: BLOCKCHAIN_NAME;
+    blockchain: BlockchainName;
     address: string;
     name: string;
     symbol: string;
     decimals: number;
 };
 
+/**
+ * Contains main token's fields.
+ */
 export class Token {
+    /**
+     * Creates Token based on token's address and blockchain.
+     * @param tokenBaseStruct Base token structure.
+     */
     public static async createToken(tokenBaseStruct: TokenBaseStruct): Promise<Token> {
         const web3Public = Injector.web3PublicService.getWeb3Public(tokenBaseStruct.blockchain);
         const tokenInfo = await web3Public.callForTokenInfo(tokenBaseStruct.address);
@@ -30,9 +37,12 @@ export class Token {
         });
     }
 
+    /**
+     * Creates array of Tokens based on tokens' addresses and blockchain.
+     */
     public static async createTokens(
         tokensAddresses: string[] | ReadonlyArray<string>,
-        blockchain: BLOCKCHAIN_NAME
+        blockchain: BlockchainName
     ): Promise<Token[]> {
         const web3Public = Injector.web3PublicService.getWeb3Public(blockchain);
         const tokenInfo = await web3Public.callForTokensInfo(tokensAddresses);
@@ -46,8 +56,13 @@ export class Token {
                 throw new RubicSdkError('Error while loading token');
             }
 
+            const address = tokensAddresses?.[index];
+            if (!address) {
+                throw new RubicSdkError('Address has to be defined');
+            }
+
             return new Token({
-                address: tokensAddresses[index],
+                address,
                 blockchain,
                 name: tokenInfo.name,
                 symbol: tokenInfo.symbol,
@@ -56,11 +71,14 @@ export class Token {
         });
     }
 
+    /**
+     * Maps provided tokens to their addresses.
+     */
     public static tokensToAddresses(tokens: Token[]): string[] {
         return tokens.map(token => token.address);
     }
 
-    public readonly blockchain: BLOCKCHAIN_NAME;
+    public readonly blockchain: BlockchainName;
 
     public readonly address: string;
 
