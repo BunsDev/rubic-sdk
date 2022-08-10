@@ -1,3 +1,15 @@
-import { RubicSdkError } from '@common/errors/rubic-sdk.error';
+import { RubicSdkError } from 'src/common/errors/rubic-sdk.error';
 
-export class InsufficientFundsError extends RubicSdkError {}
+/**
+ * Thrown, when user doesn't have enough balance.
+ */
+export class InsufficientFundsError extends RubicSdkError {
+    constructor(
+        public readonly tokenSymbol: string,
+        public readonly balance: string,
+        public readonly requiredBalance: string
+    ) {
+        super();
+        Object.setPrototypeOf(this, InsufficientFundsError.prototype);
+    }
+}

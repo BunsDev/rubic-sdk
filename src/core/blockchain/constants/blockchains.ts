@@ -1,7 +1,7 @@
-import { NATIVE_TOKEN_ADDRESS } from '@core/blockchain/constants/native-token-address';
-import { Blockchain } from '@core/blockchain/models/blockchain';
+import { NATIVE_TOKEN_ADDRESS } from 'src/core/blockchain/constants/native-token-address';
+import { Blockchain } from 'src/core/blockchain/models/blockchain';
 import { BLOCKCHAIN_NAME } from 'src/core/blockchain/models/blockchain-name';
-import { Token } from '@core/blockchain/tokens/token';
+import { Token } from 'src/core/blockchain/tokens/token';
 
 export const blockchains: ReadonlyArray<Blockchain> = [
     {
@@ -96,77 +96,98 @@ export const blockchains: ReadonlyArray<Blockchain> = [
         id: 1313161554,
         name: BLOCKCHAIN_NAME.AURORA,
         nativeCoin: new Token({
-            blockchain: BLOCKCHAIN_NAME.ARBITRUM,
+            blockchain: BLOCKCHAIN_NAME.AURORA,
             address: NATIVE_TOKEN_ADDRESS,
             name: 'aETH',
             symbol: 'aETH',
             decimals: 18
         })
     },
-    // Testnets
     {
-        id: 42,
-        name: BLOCKCHAIN_NAME.KOVAN,
+        id: 40,
+        name: BLOCKCHAIN_NAME.TELOS,
         nativeCoin: new Token({
-            blockchain: BLOCKCHAIN_NAME.KOVAN,
+            blockchain: BLOCKCHAIN_NAME.TELOS,
             address: NATIVE_TOKEN_ADDRESS,
-            name: 'Ethereum',
+            name: 'Telos EVM',
+            symbol: 'TLOS',
+            decimals: 18
+        })
+    },
+    {
+        id: 10,
+        name: BLOCKCHAIN_NAME.OPTIMISM,
+        nativeCoin: new Token({
+            blockchain: BLOCKCHAIN_NAME.OPTIMISM,
+            address: NATIVE_TOKEN_ADDRESS,
+            name: 'ETH',
             symbol: 'ETH',
             decimals: 18
         })
     },
     {
-        id: 97,
-        name: BLOCKCHAIN_NAME.BINANCE_SMART_CHAIN_TESTNET,
+        id: 25,
+        name: BLOCKCHAIN_NAME.CRONOS,
         nativeCoin: new Token({
-            blockchain: BLOCKCHAIN_NAME.BINANCE_SMART_CHAIN_TESTNET,
+            blockchain: BLOCKCHAIN_NAME.CRONOS,
             address: NATIVE_TOKEN_ADDRESS,
-            name: 'Binance Coin',
-            symbol: 'BNB',
+            name: 'CRO',
+            symbol: 'CRO',
             decimals: 18
         })
     },
     {
-        id: 80001,
-        name: BLOCKCHAIN_NAME.POLYGON_TESTNET,
+        id: 66,
+        name: BLOCKCHAIN_NAME.OKE_X_CHAIN,
         nativeCoin: new Token({
-            blockchain: BLOCKCHAIN_NAME.POLYGON_TESTNET,
+            blockchain: BLOCKCHAIN_NAME.OKE_X_CHAIN,
             address: NATIVE_TOKEN_ADDRESS,
-            name: 'Polygon',
-            symbol: 'MATIC',
+            name: 'OKT',
+            symbol: 'OKT',
             decimals: 18
         })
     },
     {
-        id: 1666700000,
-        name: BLOCKCHAIN_NAME.HARMONY_TESTNET,
+        id: 100,
+        name: BLOCKCHAIN_NAME.GNOSIS,
         nativeCoin: new Token({
-            blockchain: BLOCKCHAIN_NAME.HARMONY_TESTNET,
+            blockchain: BLOCKCHAIN_NAME.GNOSIS,
             address: NATIVE_TOKEN_ADDRESS,
-            name: 'ONE',
-            symbol: 'ONE',
+            name: 'xDAI',
+            symbol: 'xDAI',
             decimals: 18
         })
     },
     {
-        id: 43113,
-        name: BLOCKCHAIN_NAME.AVALANCHE_TESTNET,
+        id: 122,
+        name: BLOCKCHAIN_NAME.FUSE,
         nativeCoin: new Token({
-            blockchain: BLOCKCHAIN_NAME.AVALANCHE_TESTNET,
+            blockchain: BLOCKCHAIN_NAME.FUSE,
             address: NATIVE_TOKEN_ADDRESS,
-            name: 'AVAX',
-            symbol: 'AVAX',
+            name: 'FUSE',
+            symbol: 'FUSE',
             decimals: 18
         })
     },
     {
-        id: NaN,
-        name: BLOCKCHAIN_NAME.MOONRIVER_TESTNET,
+        id: 1284,
+        name: BLOCKCHAIN_NAME.MOONBEAM,
         nativeCoin: new Token({
-            blockchain: BLOCKCHAIN_NAME.MOONRIVER_TESTNET,
+            blockchain: BLOCKCHAIN_NAME.MOONBEAM,
             address: NATIVE_TOKEN_ADDRESS,
-            name: 'MOVR',
-            symbol: 'MOVR',
+            name: 'GLMR',
+            symbol: 'GLMR',
+            decimals: 18
+        })
+    },
+    {
+        id: 42220,
+        name: BLOCKCHAIN_NAME.CELO,
+        nativeCoin: new Token({
+            blockchain: BLOCKCHAIN_NAME.CELO,
+            address: NATIVE_TOKEN_ADDRESS,
+            name: 'CELO',
+            symbol: 'CELO',
             decimals: 18
         })
     }

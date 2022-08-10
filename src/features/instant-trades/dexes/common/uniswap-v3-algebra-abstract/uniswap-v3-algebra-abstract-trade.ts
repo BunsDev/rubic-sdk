@@ -1,5 +1,5 @@
-import { InstantTrade } from '@features/instant-trades/instant-trade';
-import { Cache, RubicSdkError } from 'src/common';
+import { InstantTrade } from 'src/features/instant-trades/instant-trade';
+import { RubicSdkError } from 'src/common';
 import {
     EncodeTransactionOptions,
     GasFeeInfo,
@@ -8,23 +8,23 @@ import {
 } from 'src/features';
 import { AbiItem } from 'web3-utils';
 import { PriceToken, Token, Web3Pure } from 'src/core';
-import { SwapOptions } from '@features/instant-trades/models/swap-options';
+import { SwapOptions } from 'src/features/instant-trades/models/swap-options';
 import BigNumber from 'bignumber.js';
-import { Injector } from '@core/sdk/injector';
-import { PriceTokenAmount } from '@core/blockchain/tokens/price-token-amount';
+import { Injector } from 'src/core/sdk/injector';
+import { PriceTokenAmount } from 'src/core/blockchain/tokens/price-token-amount';
 import { TransactionReceipt } from 'web3-eth';
-import { MethodData } from '@core/blockchain/web3-public/models/method-data';
-import { BatchCall } from '@core/blockchain/web3-public/models/batch-call';
+import { MethodData } from 'src/core/blockchain/web3-public/models/method-data';
+import { BatchCall } from 'src/core/blockchain/web3-public/models/batch-call';
 import { TransactionConfig } from 'web3-core';
-import { UniswapV3AbstractTrade } from '@features/instant-trades/dexes/common/uniswap-v3-abstract/uniswap-v3-abstract-trade';
-import { UniswapV3AlgebraRoute } from '@features/instant-trades/dexes/common/uniswap-v3-algebra-abstract/models/uniswap-v3-algebra-route';
-import { deadlineMinutesTimestamp } from '@common/utils/options';
+import { UniswapV3AbstractTrade } from 'src/features/instant-trades/dexes/common/uniswap-v3-abstract/uniswap-v3-abstract-trade';
+import { UniswapV3AlgebraRoute } from 'src/features/instant-trades/dexes/common/uniswap-v3-algebra-abstract/models/uniswap-v3-algebra-route';
+import { deadlineMinutesTimestamp } from 'src/common/utils/options';
 import {
     DEFAULT_ESTIMATED_GAS,
     WETH_TO_ETH_ESTIMATED_GAS
-} from '@features/instant-trades/dexes/common/uniswap-v3-algebra-abstract/constants/estimated-gas';
-import { Exact } from '@features/instant-trades/models/exact';
-import { getFromToTokensAmountsByExact } from '@features/instant-trades/dexes/common/utils/get-from-to-tokens-amounts-by-exact';
+} from 'src/features/instant-trades/dexes/common/uniswap-v3-algebra-abstract/constants/estimated-gas';
+import { Exact } from 'src/features/instant-trades/models/exact';
+import { getFromToTokensAmountsByExact } from 'src/features/instant-trades/dexes/common/utils/get-from-to-tokens-amounts-by-exact';
 
 export interface UniswapV3AlgebraTradeStruct {
     from: PriceTokenAmount;
@@ -36,27 +36,6 @@ export interface UniswapV3AlgebraTradeStruct {
 }
 
 export abstract class UniswapV3AlgebraAbstractTrade extends InstantTrade {
-    protected static get contractAbi(): AbiItem[] {
-        // see  https://github.com/microsoft/TypeScript/issues/34516
-        // @ts-ignore
-        const instance = new this();
-        if (!instance.contractAbi) {
-            throw new RubicSdkError('Trying to read abstract class field');
-        }
-        return instance.contractAbi;
-    }
-
-    @Cache
-    protected static get contractAddress(): string {
-        // see  https://github.com/microsoft/TypeScript/issues/34516
-        // @ts-ignore
-        const instance = new this();
-        if (!instance.contractAddress) {
-            throw new RubicSdkError('Trying to read abstract class field');
-        }
-        return instance.contractAddress;
-    }
-
     public static get type(): TradeType {
         throw new RubicSdkError(`Static TRADE_TYPE getter is not implemented by ${this.name}`);
     }
@@ -67,7 +46,9 @@ export abstract class UniswapV3AlgebraAbstractTrade extends InstantTrade {
         exact: Exact,
         weiAmount: BigNumber,
         options: Required<SwapOptions>,
-        route: UniswapV3AlgebraRoute
+        route: UniswapV3AlgebraRoute,
+        contractAbi: AbiItem[],
+        contractAddress: string
     ): Promise<BigNumber> {
         const { from, to } = getFromToTokensAmountsByExact(
             fromToken,
@@ -81,11 +62,11 @@ export abstract class UniswapV3AlgebraAbstractTrade extends InstantTrade {
         let gasLimit = estimateGasParams.defaultGasLimit;
 
         const walletAddress = Injector.web3Private.address;
-        if (walletAddress) {
+        if (walletAddress && estimateGasParams.callData) {
             const web3Public = Injector.web3PublicService.getWeb3Public(from.blockchain);
             const estimatedGas = await web3Public.getEstimatedGas(
-                this.contractAbi,
-                this.contractAddress,
+                contractAbi,
+                contractAddress,
                 estimateGasParams.callData.contractMethod,
                 estimateGasParams.callData.params,
                 walletAddress,
@@ -105,7 +86,9 @@ export abstract class UniswapV3AlgebraAbstractTrade extends InstantTrade {
         exact: Exact,
         weiAmount: BigNumber,
         options: Required<SwapOptions>,
-        routes: UniswapV3AlgebraRoute[]
+        routes: UniswapV3AlgebraRoute[],
+        contractAbi: AbiItem[],
+        contractAddress: string
     ): Promise<BigNumber[]> {
         const routesEstimateGasParams = routes.map(route => {
             const { from, to } = getFromToTokensAmountsByExact(
@@ -122,11 +105,14 @@ export abstract class UniswapV3AlgebraAbstractTrade extends InstantTrade {
         );
 
         const walletAddress = Injector.web3Private.address;
-        if (walletAddress) {
+        if (
+            walletAddress &&
+            routesEstimateGasParams.every(estimateGasParams => estimateGasParams.callData)
+        ) {
             const web3Public = Injector.web3PublicService.getWeb3Public(fromToken.blockchain);
             const estimatedGasLimits = await web3Public.batchEstimatedGas(
-                this.contractAbi,
-                this.contractAddress,
+                contractAbi,
+                contractAddress,
                 walletAddress,
                 routesEstimateGasParams.map(estimateGasParams => estimateGasParams.callData)
             );
@@ -158,7 +144,6 @@ export abstract class UniswapV3AlgebraAbstractTrade extends InstantTrade {
                 route
             }).getEstimateGasParams();
         } catch (err) {
-            console.debug(err);
             throw new RubicSdkError('Trying to call abstract class method');
         }
     }
@@ -190,9 +175,11 @@ export abstract class UniswapV3AlgebraAbstractTrade extends InstantTrade {
     }
 
     private get defaultEstimatedGas(): BigNumber {
-        return DEFAULT_ESTIMATED_GAS[this.path.length - 2].plus(
-            this.from.isNative ? WETH_TO_ETH_ESTIMATED_GAS : 0
-        );
+        const estimatedGas = DEFAULT_ESTIMATED_GAS[this.path.length - 2];
+        if (!estimatedGas) {
+            throw new RubicSdkError('Default estimated gas has to be defined');
+        }
+        return estimatedGas.plus(this.to.isNative ? WETH_TO_ETH_ESTIMATED_GAS : 0);
     }
 
     protected constructor(tradeStruct: UniswapV3AlgebraTradeStruct) {
@@ -242,8 +229,8 @@ export abstract class UniswapV3AlgebraAbstractTrade extends InstantTrade {
         );
     }
 
-    public async encode(options: EncodeTransactionOptions = {}): Promise<TransactionConfig> {
-        const { methodName, methodArguments } = this.getSwapRouterMethodData();
+    public async encode(options: EncodeTransactionOptions): Promise<TransactionConfig> {
+        const { methodName, methodArguments } = this.getSwapRouterMethodData(options.fromAddress);
         const gasParams = this.getGasParams(options);
 
         return Web3Pure.encodeMethodCall(
@@ -256,10 +243,10 @@ export abstract class UniswapV3AlgebraAbstractTrade extends InstantTrade {
         );
     }
 
-    private getSwapRouterMethodData(): MethodData {
+    private getSwapRouterMethodData(fromAddress?: string): MethodData {
         if (!this.to.isNative) {
             const { methodName: exactInputMethodName, methodArguments: exactInputMethodArguments } =
-                this.getSwapRouterExactInputMethodData(this.walletAddress);
+                this.getSwapRouterExactInputMethodData(fromAddress || this.walletAddress);
             return {
                 methodName: exactInputMethodName,
                 methodArguments: exactInputMethodArguments
@@ -278,7 +265,7 @@ export abstract class UniswapV3AlgebraAbstractTrade extends InstantTrade {
         const unwrapWETHMethodEncoded = Web3Pure.encodeFunctionCall(
             this.contractAbi,
             this.unwrapWethMethodName,
-            [amountOutMin, this.walletAddress]
+            [amountOutMin, fromAddress || this.walletAddress]
         );
 
         return {
@@ -290,16 +277,23 @@ export abstract class UniswapV3AlgebraAbstractTrade extends InstantTrade {
     /**
      * Returns encoded data of estimated gas function and default estimated gas.
      */
-    private getEstimateGasParams(): { callData: BatchCall; defaultGasLimit: BigNumber } {
-        const { methodName, methodArguments } = this.getSwapRouterMethodData();
+    private getEstimateGasParams(): { callData: BatchCall | null; defaultGasLimit: BigNumber } {
+        try {
+            const { methodName, methodArguments } = this.getSwapRouterMethodData();
 
-        return {
-            callData: {
-                contractMethod: methodName,
-                params: methodArguments,
-                value: this.from.isNative ? this.from.stringWeiAmount : undefined
-            },
-            defaultGasLimit: this.defaultEstimatedGas
-        };
+            return {
+                callData: {
+                    contractMethod: methodName,
+                    params: methodArguments,
+                    value: this.from.isNative ? this.from.stringWeiAmount : undefined
+                },
+                defaultGasLimit: this.defaultEstimatedGas
+            };
+        } catch (_err) {
+            return {
+                callData: null,
+                defaultGasLimit: this.defaultEstimatedGas
+            };
+        }
     }
 }

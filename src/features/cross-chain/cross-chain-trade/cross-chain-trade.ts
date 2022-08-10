@@ -361,7 +361,9 @@ export class CrossChainTrade {
         throw err;
     }
 
-    public async encode(options: EncodeTransactionOptions = {}): Promise<TransactionConfig> {
+    public async encode(options: EncodeTransactionOptions = {
+        fromAddress: ''
+    }): Promise<TransactionConfig> {
         const { gasLimit, gasPrice } = options;
 
         const { contractAddress, contractAbi, methodName, methodArguments, value } =

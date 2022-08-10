@@ -1,32 +1,37 @@
-import { InstantTradeProvider } from '@features/instant-trades/instant-trade-provider';
+import { InstantTradeProvider } from 'src/features/instant-trades/instant-trade-provider';
 import { PriceToken, Web3Pure } from 'src/core';
 import { SwapCalculationOptions } from 'src/features';
-import { combineOptions } from '@common/utils/options';
-import { createTokenNativeAddressProxy } from '@features/instant-trades/dexes/common/utils/token-native-address-proxy';
-import { GasPriceInfo } from '@features/instant-trades/models/gas-price-info';
+import { combineOptions } from 'src/common/utils/options';
+import { createTokenNativeAddressProxy } from 'src/features/instant-trades/dexes/common/utils/token-native-address-proxy';
+import { GasPriceInfo } from 'src/features/instant-trades/models/gas-price-info';
 import BigNumber from 'bignumber.js';
 import {
     UniswapV3AlgebraCalculatedInfo,
     UniswapV3AlgebraCalculatedInfoWithProfit
-} from '@features/instant-trades/dexes/common/uniswap-v3-algebra-abstract/models/uniswap-v3-algebra-calculated-info';
-import { InsufficientLiquidityError } from 'src/common';
-import { UniswapV3AlgebraQuoterController } from '@features/instant-trades/dexes/common/uniswap-v3-algebra-abstract/models/uniswap-v3-algebra-quoter-controller';
-import { UniswapV3AlgebraProviderConfiguration } from '@features/instant-trades/dexes/common/uniswap-v3-algebra-abstract/models/uniswap-v3-algebra-provider-configuration';
-import { PriceTokenAmount } from '@core/blockchain/tokens/price-token-amount';
+} from 'src/features/instant-trades/dexes/common/uniswap-v3-algebra-abstract/models/uniswap-v3-algebra-calculated-info';
+import { InsufficientLiquidityError, RubicSdkError } from 'src/common';
+import { UniswapV3AlgebraQuoterController } from 'src/features/instant-trades/dexes/common/uniswap-v3-algebra-abstract/models/uniswap-v3-algebra-quoter-controller';
+import { UniswapV3AlgebraProviderConfiguration } from 'src/features/instant-trades/dexes/common/uniswap-v3-algebra-abstract/models/uniswap-v3-algebra-provider-configuration';
+import { PriceTokenAmount } from 'src/core/blockchain/tokens/price-token-amount';
 import {
     UniswapV3AlgebraAbstractTrade,
     UniswapV3AlgebraTradeStruct
-} from '@features/instant-trades/dexes/common/uniswap-v3-algebra-abstract/uniswap-v3-algebra-abstract-trade';
-import { GasPriceApi } from '@common/http/gas-price-api';
-import { AlgebraTrade } from '@features/instant-trades/dexes/polygon/algebra/algebra-trade';
-import { UniswapV3TradeClass } from '@features/instant-trades/dexes/common/uniswap-v3-abstract/models/uniswap-v3-trade-class';
-import { UniswapV3AlgebraRoute } from '@features/instant-trades/dexes/common/uniswap-v3-algebra-abstract/models/uniswap-v3-algebra-route';
-import { Exact } from '@features/instant-trades/models/exact';
-import { getFromToTokensAmountsByExact } from '@features/instant-trades/dexes/common/utils/get-from-to-tokens-amounts-by-exact';
+} from 'src/features/instant-trades/dexes/common/uniswap-v3-algebra-abstract/uniswap-v3-algebra-abstract-trade';
+import { AlgebraTrade } from 'src/features/instant-trades/dexes/polygon/algebra/algebra-trade';
+import { UniswapV3TradeClass } from 'src/features/instant-trades/dexes/common/uniswap-v3-abstract/models/uniswap-v3-trade-class';
+import { UniswapV3AlgebraRoute } from 'src/features/instant-trades/dexes/common/uniswap-v3-algebra-abstract/models/uniswap-v3-algebra-route';
+import { Exact } from 'src/features/instant-trades/models/exact';
+import { getFromToTokensAmountsByExact } from 'src/features/instant-trades/dexes/common/utils/get-from-to-tokens-amounts-by-exact';
+import { EMPTY_ADDRESS } from 'src/core/blockchain/constants/empty-address';
+import { AbiItem } from 'web3-utils';
 
 export abstract class UniswapV3AlgebraAbstractProvider<
     T extends UniswapV3AlgebraAbstractTrade = UniswapV3AlgebraAbstractTrade
 > extends InstantTradeProvider {
+    protected abstract readonly contractAbi: AbiItem[];
+
+    protected abstract readonly contractAddress: string;
+
     protected abstract readonly InstantTradeClass: UniswapV3TradeClass<T> | typeof AlgebraTrade;
 
     protected abstract readonly quoterController: UniswapV3AlgebraQuoterController;
@@ -41,7 +46,9 @@ export abstract class UniswapV3AlgebraAbstractProvider<
         gasCalculation: 'calculate',
         disableMultihops: false,
         deadlineMinutes: 20,
-        slippageTolerance: 0.02
+        slippageTolerance: 0.02,
+        wrappedAddress: EMPTY_ADDRESS,
+        fromAddress: ''
     };
 
     protected abstract createTradeInstance(
@@ -57,6 +64,12 @@ export abstract class UniswapV3AlgebraAbstractProvider<
         return this.calculateDifficultTrade(from, toToken, 'input', from.weiAmount, options);
     }
 
+    /**
+     * Calculates trade, based on amount, user wants to get.
+     * @param fromToken Token to sell.
+     * @param to Token to get with output amount.
+     * @param options Additional options.
+     */
     public async calculateExactOutput(
         fromToken: PriceToken,
         to: PriceTokenAmount,
@@ -65,6 +78,12 @@ export abstract class UniswapV3AlgebraAbstractProvider<
         return this.calculateDifficultTrade(fromToken, to, 'output', to.weiAmount, options);
     }
 
+    /**
+     * Calculates input amount, based on amount, user wants to get.
+     * @param fromToken Token to sell.
+     * @param to Token to get with output amount.
+     * @param options Additional options.
+     */
     public async calculateExactOutputAmount(
         fromToken: PriceToken,
         to: PriceTokenAmount,
@@ -92,10 +111,7 @@ export abstract class UniswapV3AlgebraAbstractProvider<
         );
 
         let gasPriceInfo: GasPriceInfo | undefined;
-        if (
-            fullOptions.gasCalculation !== 'disabled' &&
-            GasPriceApi.isSupportedBlockchain(fromToken.blockchain)
-        ) {
+        if (fullOptions.gasCalculation !== 'disabled') {
             gasPriceInfo = await this.getGasPriceInfo();
         }
 
@@ -163,7 +179,7 @@ export abstract class UniswapV3AlgebraAbstractProvider<
             throw new InsufficientLiquidityError();
         }
 
-        if (options.gasCalculation === 'disabled') {
+        if (options.gasCalculation === 'disabled' && routes?.[0]) {
             return {
                 route: routes[0]
             };
@@ -181,12 +197,17 @@ export abstract class UniswapV3AlgebraAbstractProvider<
                 exact,
                 weiAmount,
                 options,
-                routes
+                routes,
+                this.contractAbi,
+                this.contractAddress
             );
 
             const calculatedProfits: UniswapV3AlgebraCalculatedInfoWithProfit[] = routes.map(
                 (route, index) => {
                     const estimatedGas = estimatedGasLimits[index];
+                    if (!estimatedGas) {
+                        throw new RubicSdkError('Estimated gas has have to be defined');
+                    }
                     const gasFeeInUsd = gasPriceInUsd!.multipliedBy(estimatedGas);
                     const profit = Web3Pure.fromWei(route.outputAbsoluteAmount, to.decimals)
                         .multipliedBy(to.price)
@@ -200,17 +221,27 @@ export abstract class UniswapV3AlgebraAbstractProvider<
                 }
             );
 
-            return calculatedProfits.sort((a, b) => b.profit.comparedTo(a.profit))[0];
+            const sortedRoutes = calculatedProfits.sort((a, b) => b.profit.comparedTo(a.profit))[0];
+            if (!sortedRoutes) {
+                throw new RubicSdkError('Sorted routes have to be defined');
+            }
+
+            return sortedRoutes;
         }
 
         const route = routes[0];
+        if (!route) {
+            throw new RubicSdkError('Route has to be defined');
+        }
         const estimatedGas = await this.InstantTradeClass.estimateGasLimitForRoute(
             from,
             to,
             exact,
             weiAmount,
             options,
-            route
+            route,
+            this.contractAbi,
+            this.contractAddress
         );
         return {
             route,
